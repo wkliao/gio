@@ -1,0 +1,138 @@
+/*
+ *  Copyright (C) 2026, Northwestern University
+ *  See COPYRIGHT notice in top-level directory.
+ *
+ * @configure_input@
+ */
+
+#ifndef H_GIO
+#define H_GIO
+
+#define GIO_VERSION       "@GIO_VERSION@"
+#define GIO_VERSION_MAJOR @GIO_VERSION_MAJOR@
+#define GIO_VERSION_MINOR @GIO_VERSION_MINOR@
+#define GIO_VERSION_SUB   @GIO_VERSION_SUB@
+#define GIO_VERSION_PRE   "@GIO_VERSION_PRE@"
+#define GIO_RELEASE_DATE  "DIST_DATE"
+
+#define GIO_MPI_ENABLED   @GIO_MPI_ENABLED@
+#define GIO_DEBUG_MODE    @GIO_DEBUG@
+#define GIO_PROFILING     @GIO_PROFILING@
+#define GIO_THREAD_SAFE   @ENABLE_THREAD_SAFE@
+
+#define GIO_NOERR              0
+#define GIO_EEXIST             (-35)  /* file already exists */
+#define GIO_EINVAL             (-36)  /* Invalid Argument */
+#define GIO_EPERM              (-37)  /* Write to read only */
+#define GIO_ENOMEM             (-61)  /* Out of memory */
+#define GIO_EACCESS            (-77)  /* Access Failure */
+#define GIO_ENEGATIVECNT       (-210) /* Negative count is specified */
+#define GIO_EFILE              (-204) /* Unknown error in file operation */
+#define GIO_ENOENT             (-220) /* File does not exist */
+#define GIO_ENOTENABLED        (-222) /* feature is not enabled */
+#define GIO_EBAD_FILE          (-223) /* Invalid file name (e.g., path name too long) */
+#define GIO_ENO_SPACE          (-224) /* Not enough space */
+#define GIO_EQUOTA             (-225) /* Quota exceeded */
+#define GIO_EFSTYPE            (-241)
+
+#define GIO_EMULTIDEFINE_OMODE    (-251) /* inconsistent file open modes among processes */
+#define GIO_EMULTIDEFINE_FNC_ARGS (-269) /* inconsistent function arguments used in collective API */
+#define GIO_EMULTIDEFINE_HINTS    (-274)
+#define GIO_EFILEVIEW             (-275) /* file view is not monotonically non-decreasing */
+
+typedef struct GIOI_File *GIO_File;
+#define GIO_FILE_NULL ((GIO_File)0)
+
+#if GIO_MPI_ENABLED == 1
+#include <mpi.h>
+typedef MPI_Count  GIO_Count;
+#else
+typedef long long int GIO_Count;
+typedef int* MPI_Comm;
+typedef int* MPI_Info;
+#define MPI_COMM_NULL NULL
+#define MPI_INFO_NULL NULL
+#endif
+
+/*---- Public APIs ----------------------------------------------------------*/
+extern const char*
+GIO_inq_libvers(void);
+
+extern const char*
+GIO_strerror(int err);
+
+extern const char*
+GIO_strerrno(int err);
+
+extern int
+GIO_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info,
+                GIO_File *fh);
+
+extern int
+GIO_close(GIO_File *fh);
+
+extern int
+GIO_sync(GIO_File fh);
+
+extern int
+GIO_delete(const char *filename);
+
+extern int
+GIO_set_size(GIO_File fh, GIO_Count size);
+
+extern int
+GIO_get_size(GIO_File fh, GIO_Count *size);
+
+extern int
+GIO_set_info(GIO_File fh, MPI_Info  users_info);
+
+extern int
+GIO_get_info(GIO_File fh, MPI_Info *info_used);
+
+extern GIO_Count
+GIO_write_at(GIO_File fh, const void *buf,
+                GIO_Count        file_npairs,
+                const GIO_Count *file_offs,
+                const GIO_Count *file_lens,
+                GIO_Count        buf_npairs,
+                const GIO_Count *buf_offs,
+                const GIO_Count *buf_lens);
+
+extern GIO_Count
+GIO_write_at_all(GIO_File fh, const void *buf,
+                GIO_Count        file_npairs,
+                const GIO_Count *file_offs,
+                const GIO_Count *file_lens,
+                GIO_Count        buf_npairs,
+                const GIO_Count *buf_offs,
+                const GIO_Count *buf_lens);
+
+extern GIO_Count
+GIO_read_at(GIO_File fh, void *buf,
+                GIO_Count        file_npairs,
+                const GIO_Count *file_offs,
+                const GIO_Count *file_lens,
+                GIO_Count        buf_npairs,
+                const GIO_Count *buf_offs,
+                const GIO_Count *buf_lens);
+
+extern GIO_Count
+GIO_read_at_all(GIO_File fh, void *buf,
+                GIO_Count        file_npairs,
+                const GIO_Count *file_offs,
+                const GIO_Count *file_lens,
+                GIO_Count        buf_npairs,
+                const GIO_Count *buf_offs,
+                const GIO_Count  *buf_lens);
+
+extern int
+GIO_inq_malloc_size(MPI_Count *size);
+
+extern int
+GIO_inq_malloc_max_size(MPI_Count *size);
+
+extern int
+GIO_inq_malloc_list(void);
+
+#endif
+

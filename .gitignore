@@ -1,0 +1,32 @@
+# Autoreconf stage files
+Makefile.in
+aclocal.m4
+autom4te.cache/
+configure
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+scripts/
+Makefile.in
+src/config.h.in
+
+# Configure stage files
+.deps
+/config.log
+/config.lt
+/config.status
+/libtool
+Makefile
+
+# Build stage files
+*.la
+*.lo
+*.mod
+*.o
+.libs
+
+# Test stage files
+*.log
+

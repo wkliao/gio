@@ -1,0 +1,466 @@
+/*
+ *  Copyright (C) 2026, Northwestern University
+ *  See COPYRIGHT notice in top-level directory.
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdio.h>
+#include <string.h> /* memcpy() */
+#include <limits.h> /* INT_MAX */
+
+#include <gioi.h>
+
+
+/*----< GIO_Calc_aggregator() >--------------------------------------------*/
+/* This subroutine returns the rank ID of aggregator who is responsible for the
+ * request represented by (off, *len).  The "len" parameter may be modified to
+ * indicate the amount of data actually available in this file domain.
+ */
+int GIO_Calc_aggregator(int               striping_unit,
+                          int               cb_nodes,
+                          const int        *cb_node_list, /* IN: [cb_nodes] */
+                          GIO_Count        min_st_off,
+                          GIO_Count        fd_size,
+                          const GIO_Count *fd_end,       /* IN: [cb_nodes] */
+                          GIO_Count        off,
+                          GIO_Count       *len)          /* IN/OUT: */
+{
+    int rank_index, rank;
+    GIO_Count avail_bytes;
+
+    /* get an index into array of aggregators */
+    rank_index = (int) ((off - min_st_off + fd_size) / fd_size - 1);
+
+    if (striping_unit > 0) {
+        /* Implementation for file domain alignment. Note fd_end[] have been
+         * aligned with file system lock boundaries when it was produced by
+         * GIO_Calc_file_domains().
+         */
+        rank_index = 0;
+        while (off > fd_end[rank_index])
+            rank_index++;
+    }
+
+    /* we index into fd_end with rank_index, and fd_end was allocated to be no
+     * bigger than cb_nodes.   If we ever violate that, we're
+     * overrunning arrays.  Obviously, we should never ever hit this abort */
+    if (rank_index >= cb_nodes || rank_index < 0) {
+        fprintf(stderr,
+                "Error %s(): rank_index(%d) >= cb_nodes(%d) fd_size=%lld off=%lld\n",
+                __func__,rank_index, cb_nodes, fd_size, off);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    /* fd_end[] is to make sure that we know how much data this aggregator is
+     * working with. The +1 is to take into account the end vs. length issue.
+     */
+    avail_bytes = fd_end[rank_index] + 1 - off;
+    if (avail_bytes < *len) {
+        /* this file domain only has part of the requested contiguous region */
+        *len = avail_bytes;
+    }
+
+    /* map our index to a rank */
+    rank = cb_node_list[rank_index];
+
+    return rank;
+}
+
+/*----<GIO_Calc_file_domains() >-------------------------------------------*/
+/* Divide the aggregate access region of a collective read/write call into a
+ * set of contiguous but disjoined file regions, called file domain (denoted as
+ * 'fd'). Each of them is assigned to an I/O aggregator. An aggregator is
+ * responsible for carrying out the file I/O for other processes whose requests
+ * fall into its file domain.
+ *
+ * fd_end[cb_nodes] - end location of file domains, inclusive offsets.
+ *      The values are indexed by an aggregator number; they needs to be
+ *      mapped to actual rank IDs in the communicator later.
+ * fd_size - average size (ceiling) of file domain among cb_nodes.
+ */
+void GIO_Calc_file_domains(int          cb_nodes,
+                             int          striping_unit,
+                             GIO_Count   min_st_off,
+                             GIO_Count   max_end_off,
+                             GIO_Count **fd_end,    /* OUT: [cb_nodes] */
+                             GIO_Count  *fd_size)   /* OUT: */
+{
+    int i, rem_front, rem_back;
+    GIO_Count end_off;
+
+    *fd_end = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * cb_nodes);
+
+    /* partition the aggregate access region equally among I/O aggregators */
+    *fd_size  = (max_end_off - min_st_off + 1 + cb_nodes - 1) / cb_nodes;
+
+    /* Align file domain to the nearest file lock boundary (as specified by
+     * striping_unit hint).
+     */
+#ifdef GIO_DEBUG
+    assert(striping_unit > 0);
+#endif
+
+    /* align fd_end[0] to the nearest file lock boundary */
+    end_off = min_st_off + *fd_size;
+    rem_front = end_off % striping_unit;
+    rem_back = striping_unit - rem_front;
+    if (rem_front < rem_back)
+        end_off -= rem_front;
+    else
+        end_off += rem_back;
+    (*fd_end)[0] = end_off - 1;
+
+    /* align (*fd_end)[i] to the nearest file lock boundary */
+    for (i=1; i<cb_nodes; i++) {
+        end_off = min_st_off + *fd_size * (i + 1);
+        rem_front = end_off % striping_unit;
+        rem_back = striping_unit - rem_front;
+        if (rem_front < rem_back)
+            end_off -= rem_front;
+        else
+            end_off += rem_back;
+        (*fd_end)[i] = end_off - 1;
+    }
+    (*fd_end)[cb_nodes - 1] = max_end_off;
+
+    /* Take care of cases in which the aggregate access region is not divisible
+     * by the number of aggregators. In such cases, the last process, or the
+     * last few processes, may have less load (even 0). For example, a region
+     * of 97 divided among 16 processes.  Note that the division is ceiling
+     * division.
+     */
+    for (i=0; i<cb_nodes; i++) {
+        if ((*fd_end)[i] > max_end_off)
+            (*fd_end)[i] = max_end_off;
+    }
+}
+
+/*----< GIO_Calc_my_req() >------------------------------------------------*/
+/* This subroutine calculates every portions of this rank's requests that fall
+ * into each aggregator's file domain. When returned, it set the following
+ * variables:
+ * my_req_naggr - number of aggregators for which this rank has a portion of
+ *      its request falling into their file domains
+ * count_per_aggr[nprocs] - number of contiguous offset-length pairs of this
+ *      rank's request that fall into the aggregators' file domains
+ * my_req[nprocs] - metadata describing this rank's requests to be carried out
+ *      by each I/O aggregator.
+ * buf_idx[nprocs] - indices into the user buffer that can be directly used to
+ *      perform file read/write. Note this is only relevant when the user
+ *      buffer is contiguous.
+ */
+void
+GIO_Calc_my_req(GIO_File          fh,
+                  GIO_Count          min_st_off,
+                  const GIO_Count   *fd_end,
+                  GIO_Count          fd_size,
+                  GIO_Count          *my_req_naggr,   /* OUT: */
+                  GIO_Count          *count_per_aggr, /* OUT: [nprocs] */
+                  GIO_Access      **my_req,         /* OUT: [nprocs] */
+                  GIO_Count          **buf_idx)        /* OUT: [nprocs] */
+{
+    size_t memLen, alloc_sz;
+    int i, nprocs, aggr;
+    GIO_Count j, l;
+    GIO_Count fd_len, rem_len, curr_idx, off, *off_ptr;
+#ifdef HAVE_MPI_LARGE_COUNT
+    GIO_Count *len_ptr;
+#else
+    int *len_ptr;
+#endif
+
+    MPI_Comm_size(fh->comm, &nprocs);
+
+    *my_req_naggr = 0;
+
+    /* Contents of count_per_aggr[] should be initialized to all 0s */
+
+    *my_req = (GIO_Access*) GIOI_Calloc(nprocs, sizeof(GIO_Access));
+
+    /* buf_idx is relevant only if the user buffer is contiguous. buf_idx[i]
+     * stores the index into user_buf where data received from rank i should be
+     * placed. This allows receives to be done without extra buffer. This can't
+     * be done if buftype is not contiguous.
+     */
+    *buf_idx = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    for (i=0; i<nprocs; i++) /* initialize buf_idx to -1 */
+        (*buf_idx)[i] = -1;
+
+    if (fh->fview.size == 0) /* zero-sized request */
+        return;
+
+#ifdef GIO_DEBUG
+    /* For non-zero sized requests, fh->fview.npairs has been checked and
+     * adjusted to a positive number at the beginning of GIO_UFS_read_coll()
+     * and GIO_UFS_write_coll().
+     */
+    assert(fh->fview.npairs > 0);
+
+    /* fh->fview's offset-length pairs should have been coalesced */
+    for (j=0; j<fh->fview.npairs; j++)
+        assert(fh->fview.len[j] > 0);
+#endif
+
+    /* one pass just to calculate how much space to allocate for my_req */
+    memLen = 0;
+    for (i=0; i<fh->fview.npairs; i++) {
+        off = fh->fview.off[i];
+        fd_len = fh->fview.len[i];
+        /* Note: we set fd_len to be the total size of the access, then
+         * GIO_Calc_aggregator() will modify the value to return the
+         * amount that was available from the file domain that holds the
+         * first part of the access.
+         */
+        aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
+                                     fh->hints->cb_nodes, fh->hints->aggr_ranks,
+                                     min_st_off, fd_size, fd_end, off,
+                                     &fd_len);
+        count_per_aggr[aggr]++;
+        memLen++;
+
+        /* figure out how much data is remaining in the access (i.e. wasn't
+         * part of the file domain that had the starting byte); we'll take
+         * care of this data (if there is any) in the while loop below.
+         */
+        rem_len = fh->fview.len[i] - fd_len;
+
+        while (rem_len != 0) {
+            off += fd_len;      /* point to first remaining byte */
+            fd_len = rem_len;   /* save remaining size, pass to calc */
+            aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
+                                         fh->hints->cb_nodes,
+                                         fh->hints->aggr_ranks, min_st_off,
+                                         fd_size, fd_end, off, &fd_len);
+
+            count_per_aggr[aggr]++;
+            memLen++;
+            rem_len -= fd_len;  /* reduce remaining length by amount from fd */
+        }
+    }
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    alloc_sz = sizeof(GIO_Count) * 2;
+    (*my_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    (*my_req)[0].lens = (*my_req)[0].offsets + memLen;
+#else
+    alloc_sz = sizeof(GIO_Count) + sizeof(int);
+    (*my_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    (*my_req)[0].lens = (int*) ((*my_req)[0].offsets + memLen);
+#endif
+
+    off_ptr = (*my_req)[0].offsets;
+    len_ptr = (*my_req)[0].lens;
+    for (i=0; i<nprocs; i++) {
+        if (count_per_aggr[i]) {
+            (*my_req)[i].offsets = off_ptr;
+            off_ptr += count_per_aggr[i];
+            (*my_req)[i].lens = len_ptr;
+            len_ptr += count_per_aggr[i];
+            (*my_req_naggr)++;
+        }
+        (*my_req)[i].count = 0; /* will be incremented in loop j below */
+    }
+
+    /* now fill in my_req */
+    curr_idx = 0;
+    for (j=0; j<fh->fview.npairs; j++) {
+        off = fh->fview.off[j];
+        fd_len = fh->fview.len[j];
+
+        aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
+                                     fh->hints->cb_nodes, fh->hints->aggr_ranks,
+                                     min_st_off, fd_size, fd_end, off,
+                                     &fd_len);
+
+        /* for each separate contiguous access from this process */
+        if ((*buf_idx)[aggr] == -1)
+            (*buf_idx)[aggr] = (GIO_Count) curr_idx;
+
+        l = (*my_req)[aggr].count;
+        curr_idx += fd_len;
+
+        rem_len = fh->fview.len[j] - fd_len;
+
+        /* store aggr, offset, and len in an array of structures, my_req. Each
+         * structure contains the offsets and lengths located in that process's
+         * FD, and the associated count.
+         */
+        (*my_req)[aggr].offsets[l] = off;
+        (*my_req)[aggr].lens[l] = fd_len;
+        (*my_req)[aggr].count++;
+
+        while (rem_len != 0) {
+            off += fd_len;
+            fd_len = rem_len;
+            aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
+                                         fh->hints->cb_nodes,
+                                         fh->hints->aggr_ranks, min_st_off,
+                                         fd_size, fd_end, off, &fd_len);
+
+            if ((*buf_idx)[aggr] == -1)
+                (*buf_idx)[aggr] = (GIO_Count) curr_idx;
+
+            l = (*my_req)[aggr].count;
+            curr_idx += fd_len;
+            rem_len -= fd_len;
+
+            (*my_req)[aggr].offsets[l] = off;
+            (*my_req)[aggr].lens[l] = fd_len;
+            (*my_req)[aggr].count++;
+        }
+    }
+}
+
+/*----< GIO_Calc_others_req() >--------------------------------------------*/
+/* This subroutine produces results that are only relevant to the I/O
+ * aggregators. Based on every rank's my_req, it calculates through MPI
+ * communication for what portions of requests from all processes that fall
+ * into this aggregator's file domain. It sets the following variable:
+ * others_req[nprocs] - metadata describing all processes' requests to be
+ *      carried out by this aggregator.
+ */
+void
+GIO_Calc_others_req(GIO_File           fh,
+                      GIO_Count            my_req_naggr,
+                      const GIO_Count     *count_per_aggr,/* IN: [nprocs] */
+                      const GIO_Access  *my_req,        /* IN: [nprocs] */
+                      GIO_Access       **others_req)    /* OUT: [nprocs] */
+{
+    size_t alloc_sz, memLen;
+    int i, j, nprocs, myrank;
+    MPI_Request *reqs;
+    GIO_Count *off_ptr;
+    GIO_Count others_nprocs, *others_npairs;
+#ifdef HAVE_MPI_LARGE_COUNT
+    GIO_Count *len_ptr;
+    GIO_Count *mem_ptr;
+#else
+    int *len_ptr;
+    GIO_Count *mem_ptr;
+#endif
+
+    MPI_Comm_size(fh->comm, &nprocs);
+    MPI_Comm_rank(fh->comm, &myrank);
+
+    /* First find out how much to send/recv and from/to whom.
+     * others_npairs[nprocs] is the number of contiguous offset-length pairs of
+     * each process that fall into this aggregator's file domain.
+     */
+    others_npairs = GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+
+    MPI_Alltoall(count_per_aggr, 1, MPI_COUNT, others_npairs,
+                                 1, MPI_COUNT, fh->comm);
+
+    *others_req = (GIO_Access*) GIOI_Malloc(sizeof(GIO_Access) * nprocs);
+
+    memLen = 0;
+    for (i=0; i<nprocs; i++)
+        memLen += others_npairs[i];
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    alloc_sz = sizeof(GIO_Count) * 2 + sizeof(GIO_Count);
+    (*others_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    (*others_req)[0].lens = (*others_req)[0].offsets + memLen;
+    (*others_req)[0].mem_ptrs = (GIO_Count*) ((*others_req)[0].lens + memLen);
+#else
+    alloc_sz = sizeof(GIO_Count) + sizeof(int) + sizeof(GIO_Count);
+    (*others_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    (*others_req)[0].lens = (int *) ((*others_req)[0].offsets + memLen);
+    (*others_req)[0].mem_ptrs = (GIO_Count*) ((*others_req)[0].lens + memLen);
+#endif
+    off_ptr = (*others_req)[0].offsets;
+    len_ptr = (*others_req)[0].lens;
+    mem_ptr = (*others_req)[0].mem_ptrs;
+
+    /* others_nprocs is number of processes whose portions of requests fall
+     * into this aggregator's file domain (including self rank)
+     */
+    others_nprocs = 0;
+    for (i=0; i<nprocs; i++) {
+        if (others_npairs[i]) {
+            (*others_req)[i].count = others_npairs[i];
+            (*others_req)[i].offsets = off_ptr;
+            off_ptr += others_npairs[i];
+            (*others_req)[i].lens = len_ptr;
+            len_ptr += others_npairs[i];
+            (*others_req)[i].mem_ptrs = mem_ptr;
+            mem_ptr += others_npairs[i];
+            others_nprocs++;
+        } else
+            (*others_req)[i].count = 0;
+    }
+
+    /* now send the calculated offsets and lengths to respective processes */
+    reqs = (MPI_Request*) GIOI_Malloc(sizeof(MPI_Request) *
+           (my_req_naggr + others_nprocs) * 2);
+
+    j = 0;
+    for (i=0; i<nprocs; i++) {
+        if ((*others_req)[i].count == 0)
+            continue;
+        if (i == myrank) {
+            /* send to self by using memcpy().
+             * Note (*others_req)[i].count == my_req[i].count
+             */
+            memcpy((*others_req)[i].offsets, my_req[i].offsets,
+                   my_req[i].count * sizeof(GIO_Count));
+#ifdef HAVE_MPI_LARGE_COUNT
+            memcpy((*others_req)[i].lens, my_req[i].lens,
+                   my_req[i].count * sizeof(GIO_Count));
+#else
+            memcpy((*others_req)[i].lens, my_req[i].lens,
+                   my_req[i].count * sizeof(int));
+#endif
+        }
+        else {
+#ifdef HAVE_MPI_LARGE_COUNT
+            MPI_Irecv_c((*others_req)[i].offsets, (*others_req)[i].count,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            MPI_Irecv_c((*others_req)[i].lens, (*others_req)[i].count,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+#else
+            /* check overflow 4-byte int */
+            assert((*others_req)[i].count <= 2147483647);
+
+            MPI_Irecv((*others_req)[i].offsets, (int)(*others_req)[i].count,
+                      MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            MPI_Irecv((*others_req)[i].lens, (int)(*others_req)[i].count,
+                      MPI_INT, i, i + myrank, fh->comm, &reqs[j++]);
+#endif
+        }
+    }
+
+    for (i=0; i<nprocs; i++) {
+        if (my_req[i].count && i != myrank) {
+#ifdef HAVE_MPI_LARGE_COUNT
+            MPI_Isend_c(my_req[i].offsets, my_req[i].count,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            MPI_Isend_c(my_req[i].lens, my_req[i].count,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+#else
+            assert(my_req[i].count <= INT_MAX); /* overflow 4-byte int */
+            MPI_Isend(my_req[i].offsets, (int)my_req[i].count,
+                      MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            MPI_Isend(my_req[i].lens, (int)my_req[i].count,
+                      MPI_INT, i, i + myrank, fh->comm, &reqs[j++]);
+#endif
+        }
+    }
+
+    if (j) {
+#ifdef HAVE_MPI_STATUSES_IGNORE
+        MPI_Waitall(j, reqs, MPI_STATUSES_IGNORE);
+#else
+        MPI_Status *sts = (MPI_Status*) GIOI_Malloc(sizeof(MPI_Status) * j);
+        MPI_Waitall(j, reqs, sts);
+        GIOI_Free(sts);
+#endif
+    }
+
+    GIOI_Free(others_npairs);
+    GIOI_Free(reqs);
+}
+
