@@ -16,7 +16,8 @@ noinst_LTLIBRARIES = libgio.la
 
 H_SRCS = gio.h
 
-C_SRCS = gio_open.c \
+C_SRCS = gio_lib_version.c \
+         gio_open.c \
          gio_close.c \
          gio_fstype.c \
          gio_lock.c \
