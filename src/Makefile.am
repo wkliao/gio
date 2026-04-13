@@ -12,9 +12,9 @@ if GIO_DEBUG
    AM_CPPFLAGS += -DGIO_DEBUG
 endif
 
-noinst_LTLIBRARIES = libgio.la
+lib_LTLIBRARIES = libgio.la
 
-H_SRCS = gio.h
+nodist_include_HEADERS = gio.h
 
 C_SRCS = gio_lib_version.c \
          gio_open.c \
@@ -42,11 +42,35 @@ C_SRCS = gio_lib_version.c \
          gio_lustre_wr_coll.c
 
 
-libgio_la_SOURCES = $(C_SRCS) $(H_SRCS)
+libgio_la_SOURCES = $(C_SRCS)
+
+# The script shows the end users how GIO is built
+bin_SCRIPTS = gio-config
 
 EXTRA_DIST = gioi.h
 
 CLEANFILES = core core.* *.gcda *.gcno *.gcov gmon.out
 
 tests-local: all
+
+# For VPATH build (parallel build), try delete all sub-directories
+distclean-local:
+	@for d in $(DIST_SUBDIRS) ; do \
+       if [ -d $$d/.deps ] ; then rmdir $$d/.deps || true ; fi ; \
+    done ; \
+    if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+       for d in $(DIST_SUBDIRS) ; do \
+           rmdir $$d || true ; \
+       done ; \
+    fi
+
+dist-hook:
+	$(SED_I) -e "s|DIST_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio.h.in
+	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio-config.in
+
+# GNU autoconf allows DESTDIR variable when running 'make install' which will
+# prepend it before all installation names.
+install-exec-hook:
+	$(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config
+	chmod +x $(DESTDIR)$(bindir)/gio-config
 

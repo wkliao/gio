@@ -1,0 +1,218 @@
+#! /bin/sh
+#
+# Copyright (C) 2026, Northwestern University
+# See COPYRIGHT notice in top-level directory.
+#
+# This forms the basis for the gio-config utility, which tells you various
+# things about the GIO installation.
+#
+# @configure_input@
+
+prefix=INSTALL_PREFIX
+exec_prefix=INSTALL_EXEC_PREFIX
+libdir="@libdir@"
+includedir="@includedir@"
+
+# Preprocessing:
+CPP="@CPP@"
+
+thread_safe_mode="@ENABLE_THREAD_SAFE@"
+profiling_mode="@GIO_PROFILING@"
+debug_mode="@GIO_DEBUG@"
+
+CPPFLAGS="@CPPFLAGS@"
+if test "x$debug_mode" = x1 ; then
+   if test "x$CPPFLAGS" = x ; then
+      CPPFLAGS="-DGIO_DEBUG"
+   else
+      CPPFLAGS="$CPPFLAGS -DGIO_DEBUG"
+   fi
+fi
+
+# Compilation:
+MPICC="@MPICC@"
+MPICXX="@MPICXX@"
+
+# debugging and optimization options for compiling and linking
+CFLAGS="@CFLAGS@"
+
+# Linking:
+LDFLAGS="@LDFLAGS@"
+LIBS="@LIBS@"
+
+version="@PACKAGE_NAME@ @GIO_VERSION@"
+CC=${MPICC}
+
+config_date="@CONFIG_DATE@"
+release_date="GIO_RELEASE_DATE"
+
+usage()
+{
+    cat <<EOF
+gio-config is a utility program to display the build and installation
+information of the GIO library.
+
+Usage: gio-config [OPTION]
+
+Available values for OPTION include:
+
+  --help                      display this help message and exit
+  --all                       display all options
+  --cc                        C compiler used to build GIO
+  --cflags                    C compiler flags used to build GIO
+  --cppflags                  C pre-processor flags used to build GIO
+  --ldflags                   Linker flags used to build GIO
+  --libs                      Extra libraries used to build GIO
+  --profiling                 Whether internal profiling is enabled or not
+  --thread-safe               Whether thread-safe capability is enabled or not
+  --debug                     Whether GIO is built with debug mode
+  --prefix                    Installation directory
+  --includedir                Installation directory containing header files
+  --libdir                    Installation directory containing library files
+  --version                   Library version
+  --release-date              Date of GIO source was released
+  --config-date               Date of GIO library was configured
+EOF
+    exit $1
+}
+
+all()
+{
+        echo
+        echo "This $version was built with the following features:"
+        echo
+if test "x$profiling_mode" = x1; then
+        echo "  --profiling                 -> enabled"
+else
+        echo "  --profiling                 -> disabled"
+fi
+if test "x$thread_safe_mode" = x1; then
+        echo "  --thread-safe               -> enabled"
+else
+        echo "  --thread-safe               -> disabled"
+fi
+if test "x$debug_mode" = x1; then
+        echo "  --debug                     -> enabled"
+else
+        echo "  --debug                     -> disabled"
+fi
+        echo
+        echo "This $version was built using the following compilers and flags:"
+        echo
+        echo "  --cc            -> $MPICC"
+        echo "  --ldflags       -> $LDFLAGS"
+        echo "  --libs          -> $LIBS"
+        echo
+        echo "This $version has been installed under the following directories:"
+        echo
+        echo "  --prefix        -> $prefix"
+        echo "  --includedir    -> $includedir"
+        echo "  --libdir        -> $libdir"
+        echo
+        echo "Additional information:"
+        echo
+        echo "  --version       -> $version"
+        echo "  --release-date  -> $release_date"
+        echo "  --config-date   -> $config_date"
+}
+
+if test $# -eq 0; then
+    usage 1
+fi
+
+while test $# -gt 0; do
+    case "$1" in
+    # this deals with options in the style
+    # --option=value and extracts the value part
+    # [not currently used]
+    -*=*) value=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) value= ;;
+    esac
+
+    case "$1" in
+
+    --help)
+        usage 0
+        ;;
+
+    --all)
+        all
+        ;;
+
+    --cc)
+        echo "$MPICC" | sed -e 's/^[ \t]*//'
+        ;;
+
+    --cflags)
+        echo "$CFLAGS" | sed -e 's/^[ \t]*//'
+        ;;
+
+    --cppflags)
+        echo "$CPPFLAGS" | sed -e 's/^[ \t]*//'
+        ;;
+
+    --prefix)
+       echo "$prefix" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --includedir)
+       echo "$includedir" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --libdir)
+       echo "$libdir" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --ldflags)
+       echo "$LDFLAGS" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --libs)
+       echo "$LIBS" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --version)
+        echo "$version" | sed -e 's/^[ \t]*//'
+        ;;
+
+    --profiling)
+if test "x$profiling_mode" = x1; then
+        echo "enabled"
+else
+        echo "disabled"
+fi
+        ;;
+
+    --thread-safe)
+if test "x$thread_safe_mode" = x1; then
+        echo "enabled"
+else
+        echo "disabled"
+fi
+        ;;
+
+    --debug)
+if test "x$debug_mode" = x1; then
+        echo "enabled"
+else
+        echo "disabled"
+fi
+        ;;
+
+    --release-date)
+        echo "$release_date"
+        ;;
+
+    --config-date)
+        echo "$config_date"
+        ;;
+
+    *)
+        echo "unknown option: $1"
+        usage 1
+        ;;
+    esac
+    shift
+done
+
+exit 0

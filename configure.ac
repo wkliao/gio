@@ -736,6 +736,7 @@ AC_SUBST(ABIVERSIONFLAGS)
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
+                src/gio-config \
 )
 
 AC_SUBST(enable_static)
