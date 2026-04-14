@@ -13,8 +13,8 @@
 
 #include "gioi.h"
 
-/*----< GIO_File_delete() >-------------------------------------------------*/
-int GIO_File_delete(const char *filename)
+/*----< GIO_delete() >-------------------------------------------------------*/
+int GIO_delete(const char *filename)
 {
     int err = GIO_NOERR;
     char *path = GIOI_remove_file_system_type_prefix(filename);

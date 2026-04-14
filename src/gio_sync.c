@@ -13,8 +13,8 @@
 
 #include "gioi.h"
 
-/*----< GIO_File_sync() >---------------------------------------------------*/
-int GIO_File_sync(GIO_File fh)
+/*----< GIO_sync() >---------------------------------------------------------*/
+int GIO_sync(GIO_File fh)
 {
     int err = GIO_NOERR;
 

@@ -122,7 +122,7 @@ int num_memcpy=0;
 
 #ifdef GIO_DEBUG
     /* If this request is not zero-sized, fh->fview.npairs has been adjusted
-     * to be a positive number at the call to GIO_File_write_at_all().
+     * to be a positive number at the call to GIO_write_at_all().
      */
     assert(fh->fview.npairs > 0);
 #endif

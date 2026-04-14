@@ -700,7 +700,7 @@ int Lustre_set_cb_node_list(GIO_File fh)
 
     /* Next step is to determine the MPI rank IDs of I/O aggregators and add
      * them into aggr_ranks[]. Note fh->hints->aggr_ranks will be freed in
-     * GIO_File_close().
+     * GIO_close().
      */
     fh->hints->aggr_ranks = (int *) GIOI_Malloc(sizeof(int) * num_aggr);
     if (fh->hints->aggr_ranks == NULL)
@@ -774,7 +774,7 @@ int Lustre_set_cb_node_list(GIO_File fh)
          */
         int *naggr_per_node, *idx_per_node, avg;
         idx_per_node = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
-        naggr_per_node = (int*) GIOI_Malloc(sizeof(int)*fh->num_NUMAs);
+        naggr_per_node = (int*) GIOI_Malloc(sizeof(int) * fh->num_NUMAs);
         for (i = 0; i < striping_factor % fh->num_NUMAs; i++)
             naggr_per_node[i] = striping_factor / fh->num_NUMAs + 1;
         for (; i < fh->num_NUMAs; i++)
@@ -917,8 +917,8 @@ first_ost_id = -1;
 #ifdef HAVE_LUSTRE
     int overstriping_ratio, str_factor, str_unit, start_iodev;
 
-    /* In a call to GIO_File_set_info() earlier, hints have been validated to
-     * be consistent among all processes.
+    /* In a call to GIO_set_info() earlier, hints have been validated to be
+     * consistent among all processes.
      */
 
     str_unit           = fh->hints->striping_unit;
