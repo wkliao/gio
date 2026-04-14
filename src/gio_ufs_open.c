@@ -62,7 +62,7 @@ int UFS_set_cb_node_list(GIO_File fh)
         /* If hint cb_nodes is not set by user, select one rank per node to be
          * an I/O aggregator
          */
-        fh->hints->cb_nodes = fh->num_nodes;
+        fh->hints->cb_nodes = fh->num_NUMAs;
     else if (fh->hints->cb_nodes > nprocs)
         /* cb_nodes must be <= nprocs */
         fh->hints->cb_nodes = nprocs;
@@ -72,17 +72,17 @@ int UFS_set_cb_node_list(GIO_File fh)
         return GIO_ENOMEM;
 
     /* number of MPI processes running on each node */
-    nprocs_per_node = (int*) GIOI_Calloc(fh->num_nodes, sizeof(int));
+    nprocs_per_node = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
 
     for (i=0; i<nprocs; i++) nprocs_per_node[fh->ids[i]]++;
 
     /* construct rank IDs of MPI processes running on each node */
-    ranks_per_node = (int**) GIOI_Malloc(sizeof(int*) * fh->num_nodes);
+    ranks_per_node = (int**) GIOI_Malloc(sizeof(int*) * fh->num_NUMAs);
     ranks_per_node[0] = (int*) GIOI_Malloc(sizeof(int) * nprocs);
-    for (i=1; i<fh->num_nodes; i++)
+    for (i=1; i<fh->num_NUMAs; i++)
         ranks_per_node[i] = ranks_per_node[i - 1] + nprocs_per_node[i - 1];
 
-    for (i=0; i<fh->num_nodes; i++) nprocs_per_node[i] = 0;
+    for (i=0; i<fh->num_NUMAs; i++) nprocs_per_node[i] = 0;
 
     /* Populate ranks_per_node[], list of MPI ranks running on each node.
      * Populate nprocs_per_node[], number of MPI processes on each node.
@@ -102,7 +102,7 @@ int UFS_set_cb_node_list(GIO_File fh)
     for (i=0; i<fh->hints->cb_nodes; i++) {
         if (j >= nprocs_per_node[k]) { /* if run out of ranks in this node k */
             k++;
-            if (k == fh->num_nodes) { /* round-robin to first node */
+            if (k == fh->num_NUMAs) { /* round-robin to first node */
                 k = 0;
                 j++;
             }
@@ -113,7 +113,7 @@ int UFS_set_cb_node_list(GIO_File fh)
             fh->is_agg = 1;
             fh->my_cb_nodes_index = i;
         }
-        if (k == fh->num_nodes) { /* round-robin to first node */
+        if (k == fh->num_NUMAs) { /* round-robin to first node */
             k = 0;
             j++;
         }
@@ -126,10 +126,10 @@ int UFS_set_cb_node_list(GIO_File fh)
      * Performance evaluation on Perlmutter Lustre using WRF-IO does not show a
      * noticeable difference between the round-robin and block policies.
      */
-    int avg = fh->hints->cb_nodes / fh->num_nodes;
-    int rem = fh->hints->cb_nodes % fh->num_nodes;
+    int avg = fh->hints->cb_nodes / fh->num_NUMAs;
+    int rem = fh->hints->cb_nodes % fh->num_NUMAs;
     k = 0;
-    for (i=0; i<fh->num_nodes; i++) {
+    for (i=0; i<fh->num_NUMAs; i++) {
         int num_aggr = (i < rem) ? avg + 1 : avg;
         /* pick num_aggr processes as I/O aggregators in this node i */
         for (j=0; j<num_aggr; j++) {
@@ -236,7 +236,7 @@ err_out:
 
     SET_INFO(fh)
 
-    /* Construct cb_nodes rank list, which requires fh->num_nodes to be known
+    /* Construct cb_nodes rank list, which requires fh->num_NUMAs to be known
      * on all processes.
      */
     UFS_set_cb_node_list(fh);

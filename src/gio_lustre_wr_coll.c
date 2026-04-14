@@ -1070,7 +1070,7 @@ LUSTRE_Calc_others_req(GIO_File           fh,
      *
      * Below use a threshold of 48, number of processes per compute node.
      */
-    do_alltoallv = (fh->num_nodes > 0) ? (nprocs / fh->num_nodes > 48) : 0;
+    do_alltoallv = (fh->num_NUMAs > 0) ? (nprocs / fh->num_NUMAs > 48) : 0;
 #else
     do_alltoallv=0;
 #endif
@@ -2189,8 +2189,8 @@ double curT = MPI_Wtime();
      */
     int orig_striping_unit = fh->hints->striping_unit;
 
-    if (fh->hints->striping_factor >= fh->num_nodes * 2) {
-        fh->hints->striping_unit *= (fh->hints->striping_factor / fh->num_nodes);
+    if (fh->hints->striping_factor >= fh->num_NUMAs * 2) {
+        fh->hints->striping_unit *= (fh->hints->striping_factor / fh->num_NUMAs);
 
         if (fh->hints->cb_buffer_size < fh->hints->striping_unit) {
             char value[MPI_MAX_INFO_VAL + 1];
@@ -2292,7 +2292,7 @@ double curT = MPI_Wtime();
 
 #ifdef USE_MPI_ALLTOALLW
     {
-        /* When num_nodes < striping_factor, using MPI_Alltoallw in
+        /* When num_NUMAs < striping_factor, using MPI_Alltoallw in
          * commit_comm_phase() is faster than MPI_Issend/MPI_Irecv ... ?
          */
         char *env_str;
