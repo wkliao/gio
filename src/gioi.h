@@ -155,8 +155,8 @@ typedef struct {
 
 typedef struct GIOI_File {
     MPI_Comm comm;        /* communicator indicating who called open */
-    int  num_NUMAs;       /* number of unique compute nodes */
-    int *ids;             /* [nprocs] node ID of each MPI process */
+    int  num_NUMAs;       /* number of unique NUMA compute nodes */
+    int *NUMA_IDs;        /* [nprocs] node ID of each MPI process */
 
     const char *filename;
 

@@ -71,10 +71,10 @@ int UFS_set_cb_node_list(GIO_File fh)
     if (fh->hints->aggr_ranks == NULL)
         return GIO_ENOMEM;
 
-    /* number of MPI processes running on each node */
+    /* number of MPI processes running on each NUMA node */
     nprocs_per_node = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
 
-    for (i=0; i<nprocs; i++) nprocs_per_node[fh->ids[i]]++;
+    for (i=0; i<nprocs; i++) nprocs_per_node[fh->NUMA_IDs[i]]++;
 
     /* construct rank IDs of MPI processes running on each node */
     ranks_per_node = (int**) GIOI_Malloc(sizeof(int*) * fh->num_NUMAs);
@@ -84,11 +84,11 @@ int UFS_set_cb_node_list(GIO_File fh)
 
     for (i=0; i<fh->num_NUMAs; i++) nprocs_per_node[i] = 0;
 
-    /* Populate ranks_per_node[], list of MPI ranks running on each node.
-     * Populate nprocs_per_node[], number of MPI processes on each node.
+    /* Populate ranks_per_node[], list of MPI ranks running on each NUMA node.
+     * Populate nprocs_per_node[], number of MPI processes on each NUMA node.
      */
     for (i=0; i<nprocs; i++) {
-        k = fh->ids[i];
+        k = fh->NUMA_IDs[i];
         ranks_per_node[k][nprocs_per_node[k]] = i;
         nprocs_per_node[k]++;
     }

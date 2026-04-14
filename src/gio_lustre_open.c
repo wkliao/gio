@@ -548,7 +548,7 @@ int Lustre_set_cb_node_list(GIO_File fh)
     /* number of MPI processes running on each node */
     nprocs_per_node = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
 
-    for (i=0; i<nprocs; i++) nprocs_per_node[fh->ids[i]]++;
+    for (i=0; i<nprocs; i++) nprocs_per_node[fh->NUMA_IDs[i]]++;
 
     /* construct rank IDs of MPI processes running on each node */
     ranks_per_node = (int**) GIOI_Malloc(sizeof(int*) * fh->num_NUMAs);
@@ -562,7 +562,7 @@ int Lustre_set_cb_node_list(GIO_File fh)
      * Populate nprocs_per_node[], number of MPI processes on each node.
      */
     for (i=0; i<nprocs; i++) {
-        k = fh->ids[i];
+        k = fh->NUMA_IDs[i];
         ranks_per_node[k][nprocs_per_node[k]] = i;
         nprocs_per_node[k]++;
     }
