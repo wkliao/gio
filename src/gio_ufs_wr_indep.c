@@ -22,11 +22,11 @@
 
 /*----< GIO_UFS_write_contig() >-------------------------------------------*/
 GIO_Count
-GIO_UFS_write_contig(GIO_File   fh,
-                       const void  *buf,
-                       GIO_Count  w_size,
-                       GIO_Count offset,
-                       int          is_coll)
+GIO_UFS_write_contig(GIO_File    fh,
+                     const void *buf,
+                     GIO_Count   w_size,
+                     GIO_Count   offset,
+                     int         is_coll)
 {
     char *p;
     ssize_t err = 0;
@@ -105,8 +105,8 @@ err_out:
  * one round, which greatly simplifies the implementation of this subroutine.
  */
 GIO_Count
-GIO_UFS_write_indep(GIO_File  fh,
-                      const void *buf)
+GIO_UFS_write_indep(GIO_File    fh,
+                    const void *buf)
 {
     char *ptr, *cpy_ptr, *tmp_buf=NULL;
     GIO_Count i, j, k, ntimes;
@@ -114,35 +114,16 @@ GIO_UFS_write_indep(GIO_File  fh,
     GIO_Count lock_len, len, total_len=0, tmp_buf_size, file_rem, buf_rem;
 
 #ifdef GIO_DEBUG
-    /* I/O hints should have been set already, even if this rank is not an INA
-     * aggregator.
-     */
+    /* User I/O hints should have been checked already. */
     assert(fh->hints->ind_wr_buffer_size > 0);
 
     /* zero-sized requests should have returned in GIO_read_indep() */
     assert(fh->bview.npairs > 0);
     assert(fh->bview.size > 0);
+
+    /* File should have been opened already, even for non-aggregators */
+    assert(fh->is_open == 1);
 #endif
-
-    if (!fh->is_open) {
-        /* Open the file to obtain fh->fd_sys if this process has not opened
-         * the file yet. This happens to the processes that are neither I/O
-         * aggregators nor INA aggregators.
-         */
-        int perm, old_mask = umask(022);
-        umask(old_mask);
-        perm = old_mask ^ GIO_PERM;
-
-        fh->fd_sys = open(fh->filename, fh->amode, perm);
-        if (fh->fd_sys == -1) {
-            int rank;
-            MPI_Comm_rank(fh->comm, &rank);
-            fprintf(stderr, "%s line %d: rank %d failed to open file %s (%s)\n",
-                    __func__,__LINE__, rank, fh->filename, strerror(errno));
-            return GIOI_error_posix("open");
-        }
-        fh->is_open = 1;
-    }
 
     if (fh->fview.npairs <= 1 && fh->bview.npairs <= 1) {
         /* Both buffer and fileview are contiguous. */

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>     /* strlen() */
 #include <sys/errno.h>
+#include <assert.h>
 
 #include <fcntl.h>      /* open(), O_CREAT */
 #include <sys/types.h>  /* open() */
@@ -307,7 +308,7 @@ int sort_ost_ids(struct llapi_layout *layout,
 
 /*----< get_striping() >-----------------------------------------------------*/
 static
-uint64_t get_striping(int         fh,
+uint64_t get_striping(int         fd,
                       const char *path,
                       uint64_t   *pattern,
                       uint64_t   *stripe_count,
@@ -326,7 +327,7 @@ uint64_t get_striping(int         fh,
     *stripe_size = LLAPI_LAYOUT_DEFAULT;
     *start_iodevice = LLAPI_LAYOUT_DEFAULT;
 
-    layout = llapi_layout_get_by_fd(fh, LLAPI_LAYOUT_GET_COPY);
+    layout = llapi_layout_get_by_fd(fd, LLAPI_LAYOUT_GET_COPY);
     if (layout == NULL) {
 #ifdef GIO_LUSTRE_DEBUG
         printf("Error at %s (%d) llapi_layout_get_by_fd() failed\n",
@@ -386,7 +387,7 @@ uint64_t get_striping(int         fh,
     if (llapi_layout_ost_index_get(layout, 0, &osts[0]) != 0) {
         /* check if is a folder */
         struct stat path_stat;
-        fstat(fh, &path_stat);
+        fstat(fd, &path_stat);
 #ifdef GIO_LUSTRE_DEBUG_VERBOSE
         if (S_ISREG(path_stat.st_mode)) /* not a regular file */
             printf("%s at %d: %s is a regular file\n",__func__,__LINE__,path);
@@ -1248,6 +1249,92 @@ err_out:
         }
         fh->is_open = 1;
     }
+
+    return err;
+}
+
+/*----< GIOI_Lustre_open_on_demand() >---------------------------------------*/
+/* This subroutine is an independent call.
+ *
+ * This subroutine is called by the non-aggregators only. Its fh has been
+ * allocated but fh->is_open is 0, i.e. the non-aggregator has not made the
+ * system open() call to open the file. In this case, it calls open() and
+ * retrieve file striping size.
+ */
+int GIOI_Lustre_open_on_demand(GIO_File fh)
+{
+    int err=GIO_NOERR, rank, perm, old_mask;
+
+#ifdef GIO_DEBUG
+    assert(fh != NULL);
+    assert(fh->is_open == 0);
+#endif
+
+    old_mask = umask(022);
+    umask(old_mask);
+    perm = old_mask ^ GIO_PERM;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* open the file now */
+    fh->fd_sys = open(fh->filename, fh->amode, perm);
+    if (fh->fd_sys == -1) {
+        fprintf(stderr,"%s line %d: world rank %d failed to open file %s (%s)\n",
+                __FILE__,__LINE__, rank, fh->filename, strerror(errno));
+        return GIOI_error_posix("open");
+    }
+    fh->is_open = 1;
+
+#ifdef HAVE_LUSTRE
+    struct llapi_layout *layout;
+    uint64_t pattern, stripe_size;
+#ifdef GIO_LUSTRE_DEBUG
+    char int_str[32];
+#endif
+
+    pattern = LLAPI_LAYOUT_DEFAULT;
+    stripe_size = LLAPI_LAYOUT_DEFAULT;
+
+    /* retrieve file layout object from Lustre */
+    layout = llapi_layout_get_by_fd(fh->fd_sys, LLAPI_LAYOUT_GET_COPY);
+    if (layout == NULL) {
+#ifdef GIO_LUSTRE_DEBUG
+        printf("Error at %s (%d) llapi_layout_get_by_fd() failed\n",
+                __FILE__, __LINE__);
+#endif
+        return GIOI_error_posix("llapi_layout_get_by_fd");
+    }
+
+    /* retrieve file striping pattern from Lustre */
+    err = llapi_layout_pattern_get(layout, &pattern);
+    if (err != 0) {
+#ifdef GIO_LUSTRE_DEBUG
+        snprintf(int_str, 32, "%lu", pattern);
+        printf("Error at %s (%d) llapi_layout_pattern_get() failed to get pattern %s\n",
+                __FILE__, __LINE__, PATTERN_STR(pattern, int_str));
+#endif
+        return GIOI_error_posix("llapi_layout_pattern_get");
+    }
+
+    /* retrieve file striping unit size from Lustre */
+    err = llapi_layout_stripe_size_get(layout, &stripe_size);
+    if (err != 0) {
+#ifdef GIO_LUSTRE_DEBUG
+        snprintf(int_str, 32, "%lu", stripe_size);
+        printf("Error at %s (%d) llapi_layout_stripe_size_get() failed to get stripe size %s\n",
+            __FILE__,__LINE__, PATTERN_STR(stripe_size, int_str));
+#endif
+        return GIOI_error_posix("llapi_layout_stripe_size_get");
+    }
+
+    if (layout != NULL) llapi_layout_free(layout);
+
+    fh->hints->striping_unit = stripe_size;
+
+#elif defined(MIMIC_LUSTRE)
+    char *env_str = getenv("MIMIC_STRIPE_SIZE");
+    fh->hints->striping_unit = (env_str != NULL) ? atoi(env_str) : STRIPE_SIZE;
+#endif
 
     return err;
 }

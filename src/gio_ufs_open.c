@@ -209,6 +209,7 @@ GIO_UFS_open(GIO_File fh)
     /* Only root obtains the striping information and bcast to all other
      * processes. For UFS, file striping is the file system block size.
      */
+    stripe_size = 1048576; /* default to 1 MiB */
 #if defined(HAVE_SYS_STAT_H) && HAVE_SYS_STAT_H == 1
     /* Get the underlying file system block size as file striping_unit */
     struct stat statbuf;
@@ -253,3 +254,50 @@ err_out:
 
     return err;
 }
+
+/*----< GIOI_UFS_open_on_demand() >------------------------------------------*/
+/* This subroutine is an independent call.
+ *
+ * This subroutine is called by the non-aggregators only. Its fh has been
+ * allocated but fh->is_open is 0, i.e. the non-aggregator has not made the
+ * system open() call to open the file. In this case, it calls open() and
+ * retrieve file striping size.
+ */
+int GIOI_UFS_open_on_demand(GIO_File fh)
+{
+    int err=GIO_NOERR, rank, perm, old_mask;
+
+#ifdef GIO_DEBUG
+    assert(fh != NULL);
+    assert(fh->is_open == 0);
+#endif
+
+    old_mask = umask(022);
+    umask(old_mask);
+    perm = old_mask ^ GIO_PERM;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* open the file now */
+    fh->fd_sys = open(fh->filename, fh->amode, perm);
+    if (fh->fd_sys == -1) {
+        fprintf(stderr,"%s line %d: world rank %d failed to open file %s (%s)\n",
+                __FILE__,__LINE__, rank, fh->filename, strerror(errno));
+        return GIOI_error_posix("open");
+    }
+    fh->is_open = 1;
+
+    fh->hints->striping_unit = 1048576; /* default to 1 MiB */
+
+#if defined(HAVE_SYS_STAT_H) && HAVE_SYS_STAT_H == 1
+    /* Get the underlying file system block size as file striping_unit */
+    struct stat statbuf;
+    err = fstat(fh->fd_sys, &statbuf);
+    if (err >= 0)
+        /* file system block size usually < MAX_INT */
+        fh->hints->striping_unit = (int)statbuf.st_blksize;
+#endif
+
+    return err;
+}
+

@@ -302,6 +302,9 @@ GIO_GEN_SetLock64(GIO_File fh, int cmd, int type, GIO_Count offset,
 extern int
 GIO_UFS_open(GIO_File fh);
 
+extern int
+GIOI_UFS_open_on_demand(GIO_File fh);
+
 extern GIO_Count
 GIO_UFS_write_indep(GIO_File fh, const void *buf);
 
@@ -328,6 +331,9 @@ GIO_Lustre_create(GIO_File fh);
 
 extern int
 GIO_Lustre_open(GIO_File fh);
+
+extern int
+GIOI_Lustre_open_on_demand(GIO_File fh);
 
 extern GIO_Count
 GIO_Lustre_write_coll(GIO_File fh, const void *buf);

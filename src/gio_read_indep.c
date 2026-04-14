@@ -9,17 +9,17 @@
 
 #include "gioi.h"
 
-/*----< GIO_read_at() >----------------------------------------------------*/
+/*----< GIO_read_at() >------------------------------------------------------*/
 /* This is an independent call. */
 GIO_Count
 GIO_read_at(GIO_File         fh,
-              void              *buf,
-              GIO_Count        file_npairs,
-              const GIO_Count *file_offs,
-              const GIO_Count *file_lens,
-              GIO_Count        buf_npairs,
-              const GIO_Count *buf_offs,
-              const GIO_Count *buf_lens)
+            void            *buf,
+            GIO_Count        file_npairs,
+            const GIO_Count *file_offs,
+            const GIO_Count *file_lens,
+            GIO_Count        buf_npairs,
+            const GIO_Count *buf_offs,
+            const GIO_Count *buf_lens)
 {
     int err = GIO_NOERR;
     GIO_Count r_len;
@@ -32,6 +32,29 @@ GIO_read_at(GIO_File         fh,
 
     if (file_npairs == 0 || buf_npairs == 0) /* zero-sized request */
         return 0;
+
+    if (fh->fstype == GIO_FS_UFS) {
+        if (!fh->is_open) {
+            /* If file has not been opened (only happen to non-aggregators),
+             * open it now and obtain hint striping_unit.
+             */
+            err = GIOI_UFS_open_on_demand(fh);
+            if (err != GIO_NOERR)
+                return err;
+        }
+    }
+    else if (fh->fstype == GIO_FS_LUSTRE) {
+        if (!fh->is_open) {
+            /* If file has not been opened (only happen to non-aggregators),
+             * open it now and obtain hint striping_unit.
+             */
+            err = GIOI_Lustre_open_on_demand(fh);
+            if (err != GIO_NOERR)
+                return err;
+        }
+    }
+    else
+        return GIO_EFSTYPE;
 
     r_len = GIO_UFS_read_indep(fh, buf);
 
