@@ -132,6 +132,9 @@ typedef struct {
     int ds_read;
     int ds_write;
 
+    /* NUMA node ID of this rank */
+    int NUMA_ID;
+
     /* Hints set by GIO, not changeable by users */
     int lustre_num_osts;
     int *aggr_ranks; /* [cb_nodes] rank IDs of I/O aggregators */
