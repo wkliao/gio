@@ -101,15 +101,18 @@ int hint_consistency_check(GIO_File fh)
         CHECK_HINT(start_iodevice);
         CHECK_HINT(cb_nodes);
         CHECK_HINT(cb_buffer_size);
+
+        CHECK_HINT(lustre_overstriping_ratio);
+
+        /* hints below are not required to be consistent */
+#if 0
         CHECK_HINT(ind_rd_buffer_size);
         CHECK_HINT(ind_wr_buffer_size);
-
         CHECK_HINT(cb_read);
         CHECK_HINT(cb_write);
         CHECK_HINT(ds_read);
         CHECK_HINT(ds_write);
-
-        CHECK_HINT(lustre_overstriping_ratio);
+#endif
 
         GIOI_Free(root_hints);
     }
@@ -120,7 +123,7 @@ int hint_consistency_check(GIO_File fh)
     return err;
 }
 
-/*----< GIO_File_set_info() >------------------------------------------------*/
+/*----< GIO_set_info() >-----------------------------------------------------*/
 /* For GIO, a file info object can only be passed to GIO at file create or open
  * call, i.e. I/O hints cannot be changed after file create/open.
  *
@@ -128,8 +131,8 @@ int hint_consistency_check(GIO_File fh)
  * hints among all processes.
  */
 int
-GIO_File_set_info(GIO_File fh,
-                    MPI_Info   users_info)
+GIO_set_info(GIO_File fh,
+             MPI_Info users_info)
 {
     int err=GIO_NOERR, flag, nprocs;
     char value[MPI_MAX_INFO_VAL + 1];
@@ -228,17 +231,19 @@ GIO_File_set_info(GIO_File fh,
     /* Lustre overstriping ratio. 0 or 1 means disabled */
     GET_INFO_INT(lustre_overstriping_ratio);
 
-    /* Check hint consistency among all processes */
+    /* Check if hint NUMA_ID is set (PnetCDF would set it). */
+    GET_INFO_INT(NUMA_ID);
+
 err_out:
-    if (nprocs > 1)
+    if (nprocs > 1) /* Check hint consistency among all processes */
         err = hint_consistency_check(fh);
 
     return err;
 }
 
-/*----< GIO_File_get_info() >-----------------------------------------------*/
-int GIO_File_get_info(GIO_File  fh,
-                        MPI_Info   *info_used)
+/*----< GIO_get_info() >-----------------------------------------------------*/
+int GIO_get_info(GIO_File  fh,
+                 MPI_Info *info_used)
 {
     int err;
 

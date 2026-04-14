@@ -119,6 +119,11 @@ typedef struct {
     int start_iodevice;
     int cb_nodes;
     int cb_buffer_size;
+
+    /* Hints for Lustre file system */
+    int lustre_overstriping_ratio;
+
+    /* hints below are not required to be consistent among all processes */
     int ind_rd_buffer_size;
     int ind_wr_buffer_size;
 
@@ -127,10 +132,7 @@ typedef struct {
     int ds_read;
     int ds_write;
 
-    /* Hints for Lustre file system */
-    int lustre_overstriping_ratio;
-
-    /* Hints set by GIO internally */
+    /* Hints set by GIO, not changeable by users */
     int lustre_num_osts;
     int *aggr_ranks; /* [cb_nodes] rank IDs of I/O aggregators */
 
