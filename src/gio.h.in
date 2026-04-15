@@ -33,7 +33,7 @@
 #define GIO_EBAD_FILE          (-223) /* Invalid file name (e.g., path name too long) */
 #define GIO_ENO_SPACE          (-224) /* Not enough space */
 #define GIO_EQUOTA             (-225) /* Quota exceeded */
-#define GIO_EFSTYPE            (-241)
+#define GIO_EFSTYPE            (-241) /* Invalid file system type */
 
 #define GIO_EMULTIDEFINE_OMODE    (-251) /* inconsistent file open modes among processes */
 #define GIO_EMULTIDEFINE_FNC_ARGS (-269) /* inconsistent function arguments used in collective API */

@@ -11,7 +11,23 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#include <string.h>
+
+#ifdef HAVE_STRERROR
+#include <string.h> /* contains prototype for ansi libc function strerror() */
+#else
+/* provide a strerror function for older unix systems */
+static char *
+strerror(int errnum)
+{
+    extern int sys_nerr;
+    extern char *sys_errlist[];
+
+    if(errnum < 0 || errnum >= sys_nerr) return NULL;
+    /* else */
+    return sys_errlist[errnum];
+}
+#endif /* HAVE_STRERROR */
+
 #include <errno.h>
 
 #include "gioi.h"
@@ -72,6 +88,8 @@ int GIOI_error_mpi(int         mpi_errorcode,
      */
     MPI_Error_class(mpi_errorcode, &errorclass);
 
+    if (errorclass == MPI_ERR_ARG)  return GIO_EINVAL;
+
     if (errorclass == MPI_ERR_FILE_EXISTS)  return GIO_EEXIST;
     if (errorclass == MPI_ERR_NO_SUCH_FILE) return GIO_ENOENT;
     /* MPI-IO should return MPI_ERR_NOT_SAME when one or more arguments of a
@@ -110,4 +128,109 @@ int GIOI_error_mpi(int         mpi_errorcode,
     return GIO_EFILE; /* other unknown file I/O error */
 }
 
+#define ISSYSERR(err) ((err) > 0)
+
+static char GIO_unknown_err_msg[128];
+
+const char*
+GIO_strerror(int err)
+{
+    sprintf(GIO_unknown_err_msg,"Unknown Error: Unrecognized error code %5d\n",err);
+
+    if (ISSYSERR(err)) {
+        const char *cp = (const char *) strerror(err);
+        if (cp == NULL) return GIO_unknown_err_msg;
+        return cp;
+    }
+
+    switch (err) {
+        case GIO_NOERR:
+            return "No error.";
+        case GIO_EINVAL:
+	        return "Invalid argument";
+        case GIO_EPERM:
+	        return "Write to read only";
+        case GIO_ENOMEM:
+	        return "Memory allocation (malloc) failure";
+        case GIO_EACCESS:
+	        return "Access failure";
+
+        case GIO_EEXIST:
+            return strerror(EEXIST);
+        case GIO_ENEGATIVECNT:
+            return "Negative count is prohibited";
+            /* Number of offset-length pairs for file view or buffer view is
+             * negative.
+             */
+        case GIO_EFILE:
+            return "Unknown error in file operation";
+            /* This error is caused by an unsuccessful file I/O call. */
+        case GIO_ENOENT:
+            return strerror(ENOENT);
+        case GIO_ENOTENABLED:
+            return "Feature is not enabled at configure time.";
+        case GIO_EBAD_FILE:
+            return "Invalid file name (e.g., path name too long)";
+        case GIO_ENO_SPACE:
+            return strerror(ENOSPC);
+        case GIO_EQUOTA:
+            return strerror(EDQUOT);
+        case GIO_EFSTYPE:
+            return "Invalid file system type.";
+        case GIO_EMULTIDEFINE_OMODE:
+            return "File open mode is inconsistent among processes.";
+        case GIO_EMULTIDEFINE_FNC_ARGS:
+            return "Arguments in collective API are inconsistent among processes.";
+        case GIO_EMULTIDEFINE_HINTS:
+            return "I/O hints are not consistent among processes.";
+        case GIO_EFILEVIEW:
+            return "File view offsets are not in a monotonically non-decreasing order.";
+
+        default:
+            return GIO_unknown_err_msg;
+    }
+}
+
+/*----< GIO_strerrno() >-----------------------------------------------------*/
+/* return the GIO error code name */
+const char *
+GIO_strerrno(int err)
+{
+    static char unknown_str[64];
+
+    if (err > 0) { /* system error */
+        const char *cp = (const char *) strerror(err);
+        if (cp == NULL)
+            sprintf(unknown_str,"Unknown error code %d",err);
+        else
+            sprintf(unknown_str,"System error code %d (%s)",err,cp);
+        return unknown_str;
+    }
+
+#define RETURN_ERRORNO(x) case x : return #x ;
+
+    switch (err) {
+        RETURN_ERRORNO(GIO_NOERR)
+        RETURN_ERRORNO(GIO_EINVAL)
+        RETURN_ERRORNO(GIO_EPERM)
+        RETURN_ERRORNO(GIO_ENOMEM)
+        RETURN_ERRORNO(GIO_EACCESS)
+        RETURN_ERRORNO(GIO_EEXIST)
+        RETURN_ERRORNO(GIO_ENEGATIVECNT)
+        RETURN_ERRORNO(GIO_EFILE)
+        RETURN_ERRORNO(GIO_ENOENT)
+        RETURN_ERRORNO(GIO_ENOTENABLED)
+        RETURN_ERRORNO(GIO_EBAD_FILE)
+        RETURN_ERRORNO(GIO_ENO_SPACE)
+        RETURN_ERRORNO(GIO_EQUOTA)
+        RETURN_ERRORNO(GIO_EFSTYPE)
+        RETURN_ERRORNO(GIO_EMULTIDEFINE_OMODE)
+        RETURN_ERRORNO(GIO_EMULTIDEFINE_FNC_ARGS)
+        RETURN_ERRORNO(GIO_EMULTIDEFINE_HINTS)
+        RETURN_ERRORNO(GIO_EFILEVIEW)
+        default:
+            sprintf(unknown_str,"Unknown code %d",err);
+    }
+    return unknown_str;
+}
 
