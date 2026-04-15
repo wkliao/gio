@@ -94,6 +94,7 @@ AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(CONFIGURE_ARGS_CLEAN)
 
 dnl autoheader only adds these templates to the first invocation of AC_CONFIG_HEADERS
+AH_TEMPLATE([ENABLE_THREAD_SAFE], [Define if to enable thread-safe capability])
 AH_TEMPLATE([GIO_MALLOC_TRACE],   [Define if to enable malloc tracing])
 AH_TEMPLATE([GIO_PROFILING],      [Define if to enable internal performance profiling])
 AH_TEMPLATE([HAVE_MPI_LARGE_COUNT], [Define if MPI APIs have arguments of type MPI_Count])
@@ -568,7 +569,7 @@ AC_ARG_ENABLE([thread-safe],
     [thread_safe=no]            # neither --enable-thread-safe nor --disable-thread-safe is used
 )
 
-enable_thread_safe=0
+ENABLE_THREAD_SAFE=0
 if test "x$MPICC" != x && test "x${thread_safe}" = xyes ; then
    if test "x${ax_cv_mpi_compiler_vendor}" = xMPICH ; then
       AX_COMPARE_VERSION([${ax_cv_mpi_compiler_version}],[ge],[4.0.3])
@@ -582,11 +583,10 @@ if test "x$MPICC" != x && test "x${thread_safe}" = xyes ; then
     -----------------------------------------------------------------------])
       fi
    fi
-   enable_thread_safe=1
+   AC_DEFINE(ENABLE_THREAD_SAFE)
+   ENABLE_THREAD_SAFE=1
 fi
-AC_DEFINE([ENABLE_THREAD_SAFE], [$enable_thread_safe],
-                                [Define if to enable thread-safe capability])
-AC_SUBST([ENABLE_THREAD_SAFE], [$enable_thread_safe])
+AC_SUBST(ENABLE_THREAD_SAFE)
 
 AC_ARG_WITH([pthread],
    [AS_HELP_STRING([--with-pthread=DIR],
