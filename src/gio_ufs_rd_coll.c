@@ -733,6 +733,10 @@ double curT = MPI_Wtime();
     if (fh->hints->cb_read == GIO_HINT_DISABLE ||
         (!interleave_count && fh->hints->cb_read == GIO_HINT_AUTO)) {
         /* switch to perform independent read */
+
+        if (fh->fview.npairs == 0) /* zero-sized request */
+            return 0;
+
         return GIO_UFS_read_indep(fh, buf);
     }
 

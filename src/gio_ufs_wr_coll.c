@@ -828,6 +828,9 @@ double curT = MPI_Wtime();
         (!interleave_count && fh->hints->cb_write == GIO_HINT_AUTO)) {
         /* switch to perform independent write */
 
+        if (fh->fview.npairs == 0) /* zero-sized request */
+            return 0;
+
 #ifdef WKL_DEBUG
         printf("%s %d: SWITCH to GIO_UFS_write_indep !!!\n",
                    __func__,__LINE__);
