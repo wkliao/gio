@@ -213,15 +213,15 @@ char* GIOI_remove_file_system_type_prefix(const char *filename)
     return ret_filename;
 }
 
-int GIO_sanity_check(const char         *func_name,
-                       int                 lineno,
-                       GIO_File          fh,
-                       GIO_Count         file_npairs,
-                       const GIO_Count *file_offs,
-                       const GIO_Count  *file_lens,
-                       GIO_Count         buf_npairs,
-                       const GIO_Count *buf_offs,
-                       const GIO_Count  *buf_lens)
+int GIO_sanity_check(const char      *func_name,
+                     int              lineno,
+                     GIO_File         fh,
+                     GIO_Count        file_npairs,
+                     const GIO_Count *file_offs,
+                     const GIO_Count *file_lens,
+                     GIO_Count        buf_npairs,
+                     const GIO_Count *buf_offs,
+                     const GIO_Count *buf_lens)
 {
     size_t j;
 
@@ -259,10 +259,12 @@ int GIO_sanity_check(const char         *func_name,
     fh->fview.npairs = file_npairs;
     fh->fview.off    = file_offs;
     fh->fview.len    = file_lens;
+    fh->fview.idx    = 0;
 
     fh->bview.npairs = buf_npairs;
     fh->bview.off    = buf_offs;
     fh->bview.len    = buf_lens;
+    fh->bview.idx    = 0;
 
     /* calculate total request amount */
     fh->fview.size = (file_npairs > 0) ? file_lens[0] : 0;
@@ -282,6 +284,9 @@ int GIO_sanity_check(const char         *func_name,
     fh->bview.size = 0;
     for (j=0; j<fh->bview.npairs; j++)
         fh->bview.size += fh->bview.len[j];
+
+    fh->fview.rem = (file_npairs > 1) ? file_lens[0] : fh->fview.size;
+    fh->bview.rem = (buf_npairs > 1) ? buf_lens[0] : fh->bview.size;
 
     /* Negative request amounts are not allowed */
     if (fh->fview.size < 0 || fh->bview.size < 0)
