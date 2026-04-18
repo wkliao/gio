@@ -130,7 +130,6 @@ GIO_open(MPI_Comm    comm,
     MPI_Comm_size(comm, &nprocs);
 
     fh->comm      = comm;
-    fh->filename  = filename; /* without file system type name prefix */
     fh->fd_sys    = -1;       /* file has not yet been opened */
     fh->atomicity = 0;
     fh->is_open   = 0;    /* this rank has opened the file */
@@ -153,6 +152,13 @@ GIO_open(MPI_Comm    comm,
 
     /* Find the file system type of the file to be opened. */
     fh->fstype = GIO_FileSysType(filename);
+
+    /* Remove the file system type prefix name if there is any. For example,
+     * when path = "lustre:/home/foo/testfile.nc", remove "lustre:" to make
+     * filename pointing to "/home/foo/testfile.nc", so it can be used in POSIX
+     * access() below.
+     */
+    fh->filename = GIOI_remove_file_system_type_prefix(filename);
 
     /* construct fh->NUMA_IDs[nprocs] and fh->num_NUMAs */
     if (nprocs == 1) {
