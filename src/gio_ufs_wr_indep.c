@@ -35,12 +35,12 @@ GIO_UFS_write_contig(GIO_File    fh,
 
     if (w_size == 0) return GIO_NOERR;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     assert(fh->is_open == 1);
     assert(fh->fd_sys >= 0);
 #endif
 
-#if defined(GIO_DEBUG) && (defined(HAVE_LUSTRE) || defined(MIMIC_LUSTRE))
+#if GIO_DEBUG_MODE == 1 && (defined(HAVE_LUSTRE) || defined(MIMIC_LUSTRE))
     if (is_coll) { /* This call arrived from a collective write call */
         int rank, ost_blk;
         static int striping_factor=-1, cb_nodes=-1;
@@ -71,7 +71,7 @@ GIO_UFS_write_contig(GIO_File    fh,
     }
 #endif
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     double timing = MPI_Wtime();
 #endif
     p = (char *) buf;
@@ -85,7 +85,7 @@ GIO_UFS_write_contig(GIO_File    fh,
         bytes_xfered += err;
         p += err;
     }
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     gio_wr_time[2] += MPI_Wtime() - timing;
 #endif
 
@@ -113,7 +113,7 @@ GIO_UFS_write_indep(GIO_File    fh,
     GIO_Count lock_off, file_off;
     GIO_Count lock_len, len, total_len=0, tmp_buf_size, file_rem, buf_rem;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     /* User I/O hints should have been checked already. */
     assert(fh->hints->ind_wr_buffer_size > 0);
 
@@ -249,7 +249,7 @@ GIO_UFS_write_indep(GIO_File    fh,
         last_stripe = (lock_off + lock_len - 1) / fh->hints->striping_unit;
         ntimes = (last_stripe - first_stripe) + 1;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
         /* fview's offsets should have already sorted into a monotonically
          * non-decreasing order without overlaps. In addition, earlier checks
          * have ensured all fh->fview.len[] > 0.

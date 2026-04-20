@@ -8,10 +8,6 @@ SUFFIXES = .a .o .c .h
 
 AM_CPPFLAGS  = -I${srcdir}/src
 
-if GIO_DEBUG
-   AM_CPPFLAGS += -DGIO_DEBUG
-endif
-
 lib_LTLIBRARIES = libgio.la
 
 nodist_include_HEADERS = gio.h

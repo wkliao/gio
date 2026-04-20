@@ -181,7 +181,7 @@ W_Exchange_data(GIO_File        fh,
     GIO_Count *send_size, sum, *srt_len=NULL, *tmp_len;
     GIO_Count *srt_off=NULL;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     double curT = MPI_Wtime();
 #endif
 
@@ -244,7 +244,7 @@ W_Exchange_data(GIO_File        fh,
      */
 
     if (sum) {
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         double timing = MPI_Wtime();
 #endif
         srt_off = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * sum);
@@ -255,7 +255,7 @@ W_Exchange_data(GIO_File        fh,
     /* Skip hole checking if there is no write data by this aggregator */
         GIO_Heap_merge(others_req, count, srt_off, srt_len, start_pos,
                          nprocs, nrecvs, sum);
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         if (fh->is_agg) gio_wr_time[5] += MPI_Wtime() - timing;
 #endif
     }
@@ -426,7 +426,7 @@ assert(self_recv_type != MPI_DATATYPE_NULL);
     if (self_recv_type != MPI_DATATYPE_NULL)
         MPI_Type_free(&self_recv_type);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[4] += MPI_Wtime() - curT;
     curT = MPI_Wtime();
 #endif
@@ -439,7 +439,7 @@ assert(self_recv_type != MPI_DATATYPE_NULL);
     GIOI_Free(sts);
 #endif
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[3] += MPI_Wtime() - curT;
 #endif
 
@@ -518,7 +518,7 @@ Exch_and_write(GIO_File        fh,
 
     MPI_Allreduce(&ntimes, &max_ntimes, 1, MPI_INT, MPI_MAX, fh->comm);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     gio_wr_count[0] = MAX(gio_wr_count[0], max_ntimes);
 #endif
 
@@ -624,7 +624,7 @@ Exch_and_write(GIO_File        fh,
                 recv_size[i] += MIN(round_end - req_off, req_len);
 
                 if (round_end - req_off < req_len) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                     /* Overlapped in two consecutive offset-length pairs in
                      * fview should have already been removed in ina_put().
                      */
@@ -737,7 +737,7 @@ GIO_UFS_write_coll(GIO_File  fh,
     GIO_Count *fd_end=NULL, min_st_off=0, max_end_off=LLONG_MAX;
     GIO_Count fd_size, w_len=0;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
 double curT = MPI_Wtime();
 #endif
 
@@ -749,7 +749,7 @@ double curT = MPI_Wtime();
      * within this subroutine.
      */
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     if (fh->fview.size > 0) {
         assert(fh->fview.npairs > 0);
         assert(fh->fview.off != NULL);
@@ -814,7 +814,7 @@ double curT = MPI_Wtime();
         GIOI_Free(st_end_all);
 
         if (min_st_off == -1 && max_end_off == -1) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
             /* Warn a zero-sized collective write */
             if (rank == 0)
                 printf("%s at %d: zero--sized collective write!\n",
@@ -885,7 +885,7 @@ double curT = MPI_Wtime();
 
     GIOI_Free(count_per_aggr);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[1] += MPI_Wtime() - curT;
 #endif
 
@@ -920,7 +920,7 @@ double curT = MPI_Wtime();
     GIOI_Free(others_req[0].offsets);
     GIOI_Free(others_req);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[0] += MPI_Wtime() - curT;
 #endif
 

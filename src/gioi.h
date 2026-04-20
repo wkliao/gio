@@ -205,7 +205,7 @@ typedef struct {
     size_t curr; /* index of offsets/lens that is currently being processed */
 } GIO_Access;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
 #define NTIMERS 10
 extern double    gio_wr_time[NTIMERS];
 extern double    gio_rd_time[NTIMERS];

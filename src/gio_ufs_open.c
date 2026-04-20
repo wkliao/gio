@@ -267,7 +267,7 @@ int GIOI_UFS_open_on_demand(GIO_File fh)
 {
     int err=GIO_NOERR, rank, perm, old_mask;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     assert(fh != NULL);
     assert(fh->is_open == 0);
 #endif

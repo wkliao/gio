@@ -166,7 +166,7 @@ R_Exchange_data(GIO_File          fh,
     MPI_Datatype send_type;
     MPI_Status *sts;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     double endT, startT = MPI_Wtime();
 #endif
 
@@ -263,7 +263,7 @@ R_Exchange_data(GIO_File          fh,
             nsends++;
         }
     }
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     endT = MPI_Wtime();
     if (fh->is_agg) gio_rd_time[3] += endT - startT;
     startT = endT;
@@ -299,7 +299,7 @@ R_Exchange_data(GIO_File          fh,
     MPI_Waitall(nsends, reqs + nrecvs, sts + nrecvs);
 #endif
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     endT = MPI_Wtime();
     if (fh->is_agg) gio_rd_time[4] += endT - startT;
 #endif
@@ -381,7 +381,7 @@ Read_and_exch(GIO_File          fh,
 
     MPI_Allreduce(&ntimes, &max_ntimes, 1, MPI_INT, MPI_MAX, fh->comm);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     gio_rd_count[0] = MAX(gio_rd_count[0], max_ntimes);
 #endif
 
@@ -474,7 +474,7 @@ Read_and_exch(GIO_File          fh,
             /* This should be only reachable by I/O aggregators only */
             for (j=curr_offlen_ptr[i]; j<others_req[i].count; j++) {
                 if (others_req[i].offsets[j] + partial_send[i] < round_end) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                     assert(for_curr_round + rem_size <= cb_buffer_size);
 #endif
                     r_len = GIO_UFS_read_contig(fh, read_buf + for_curr_round,
@@ -530,7 +530,7 @@ done_read:
                 /* now req_off < real_off + real_size */
                 count[i]++;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                 assert(req_off - real_off <= cb_buffer_size);
 #endif
                 addr = (char*)read_buf + req_off - (char*)real_off;
@@ -538,7 +538,7 @@ done_read:
                 send_size[i] += MIN(rem_len, req_len);
 
                 if (rem_len < req_len) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                     /* Overlapped in two consecutive offset-length pairs in
                      * fview should have already been removed in ina_get().
                      */
@@ -572,7 +572,7 @@ done_read:
 
         if (for_next_round) {
             /* move remaining data to the front of fh->io_buf for next round */
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
             assert(real_size - for_next_round <= cb_buffer_size);
 #endif
             fh->io_buf = (char*) GIOI_Malloc(cb_buffer_size);
@@ -654,7 +654,7 @@ GIO_UFS_read_coll(GIO_File  fh,
     GIO_Count min_st_off=0, max_end_off=LLONG_MAX, *fd_end=NULL;
     GIO_Count fd_size, r_len, total_r_len=0;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
 double curT = MPI_Wtime();
 #endif
 
@@ -720,7 +720,7 @@ double curT = MPI_Wtime();
         GIOI_Free(st_end_all);
 
         if (min_st_off == -1 && max_end_off == -1) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
             /* Warn a zero-sized collective request */
             if (rank == 0)
                 printf("%s at %d: zero--sized collective read!\n",
@@ -790,7 +790,7 @@ double curT = MPI_Wtime();
 
     GIOI_Free(count_per_aggr);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_rd_time[1] += MPI_Wtime() - curT;
 #endif
 
@@ -809,7 +809,7 @@ double curT = MPI_Wtime();
     GIOI_Free(others_req[0].offsets);
     GIOI_Free(others_req);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_rd_time[0] += MPI_Wtime() - curT;
 #endif
 

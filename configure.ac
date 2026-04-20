@@ -94,9 +94,7 @@ AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(CONFIGURE_ARGS_CLEAN)
 
 dnl autoheader only adds these templates to the first invocation of AC_CONFIG_HEADERS
-AH_TEMPLATE([ENABLE_THREAD_SAFE], [Define if to enable thread-safe capability])
 AH_TEMPLATE([GIO_MALLOC_TRACE],   [Define if to enable malloc tracing])
-AH_TEMPLATE([GIO_PROFILING],      [Define if to enable internal performance profiling])
 AH_TEMPLATE([HAVE_MPI_LARGE_COUNT], [Define if MPI APIs have arguments of type MPI_Count])
 
 dnl an option to use a customized rm command
@@ -411,7 +409,6 @@ if test "x${debug}" = xyes; then
    debug_mode=1
 fi
 AC_SUBST([GIO_DEBUG], [$debug_mode])
-AM_CONDITIONAL(GIO_DEBUG, [test x"$debug_mode" = x1])
 
 if test "x$MPICC" != x ; then
    AC_CHECK_TYPE([MPI_Offset], [], [], [#include <mpi.h>])
@@ -569,7 +566,7 @@ AC_ARG_ENABLE([thread-safe],
     [thread_safe=no]            # neither --enable-thread-safe nor --disable-thread-safe is used
 )
 
-ENABLE_THREAD_SAFE=0
+enable_thread_safe=0
 if test "x$MPICC" != x && test "x${thread_safe}" = xyes ; then
    if test "x${ax_cv_mpi_compiler_vendor}" = xMPICH ; then
       AX_COMPARE_VERSION([${ax_cv_mpi_compiler_version}],[ge],[4.0.3])
@@ -583,10 +580,9 @@ if test "x$MPICC" != x && test "x${thread_safe}" = xyes ; then
     -----------------------------------------------------------------------])
       fi
    fi
-   AC_DEFINE(ENABLE_THREAD_SAFE)
-   ENABLE_THREAD_SAFE=1
+   enable_thread_safe=1
 fi
-AC_SUBST(ENABLE_THREAD_SAFE)
+AC_SUBST([ENABLE_THREAD_SAFE], [$enable_thread_safe])
 
 AC_ARG_WITH([pthread],
    [AS_HELP_STRING([--with-pthread=DIR],
@@ -634,10 +630,9 @@ AC_ARG_ENABLE([profiling],
    [enable_profiling=${enableval}], [enable_profiling=no]
 )
 
-GIO_PROFILING=0
+profiling_mode=0
 if test "x$enable_profiling" = "xyes" ; then
-   AC_DEFINE(GIO_PROFILING)
-   GIO_PROFILING=1
+   profiling_mode=1
 
    if test "x${debug}" = xno; then
       dnl check required functions for enabling malloc tracing
@@ -646,7 +641,7 @@ if test "x$enable_profiling" = "xyes" ; then
       fi
    fi
 fi
-AC_SUBST(GIO_PROFILING)
+AC_SUBST([GIO_PROFILING], [$profiling_mode])
 
 dnl build test programs and benchmark programs
 AM_CONDITIONAL(BUILD_TESTSETS, [true])

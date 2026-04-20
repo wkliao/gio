@@ -55,7 +55,7 @@ static void   *gioi_mem_root;
 static size_t  gioi_mem_alloc;
 static size_t  gioi_max_mem_alloc;
 
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
 /* updating the binary tree used in tfind()/tsearch()/tdelete() is not
  * thread-safe, protect these subroutines with a mutex */
 #include<pthread.h>
@@ -108,7 +108,7 @@ void gioi_add_mem_entry(void       *buf,
                         const char *func,
                         const char *filename)
 {
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
 
@@ -136,7 +136,7 @@ void gioi_add_mem_entry(void       *buf,
         gioi_mem_alloc += size;
         gioi_max_mem_alloc = MAX(gioi_max_mem_alloc, gioi_mem_alloc);
     }
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
 }
@@ -148,7 +148,7 @@ int gioi_del_mem_entry(void *buf)
 {
     int err=0;
 
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
     /* use C tsearch utility */
@@ -183,7 +183,7 @@ int gioi_del_mem_entry(void *buf)
         fprintf(stderr, "Error at line %d file %s: gioi_mem_root is NULL\n",
                 __LINE__,__FILE__);
 fn_exit:
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
     return err;
@@ -392,11 +392,11 @@ void GIOI_Free_fn(void       *ptr,
 int GIO_inq_malloc_size(GIO_Count *size)
 {
 #ifdef GIO_MALLOC_TRACE
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
     *size = (GIO_Count)gioi_mem_alloc;
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
     return GIO_NOERR;
@@ -412,11 +412,11 @@ int GIO_inq_malloc_size(GIO_Count *size)
 int GIO_inq_malloc_max_size(GIO_Count *size)
 {
 #ifdef GIO_MALLOC_TRACE
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
     *size = (GIO_Count)gioi_max_mem_alloc;
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
     return GIO_NOERR;
@@ -432,13 +432,13 @@ int GIO_inq_malloc_max_size(GIO_Count *size)
 int GIO_inq_malloc_list(void)
 {
 #ifdef GIO_MALLOC_TRACE
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
     /* check if malloc tree is empty */
     if (gioi_mem_root != NULL)
         twalk(gioi_mem_root, gioi_walker);
-#ifdef ENABLE_THREAD_SAFE
+#if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
     return GIO_NOERR;

@@ -99,7 +99,7 @@ void GIO_Calc_file_domains(int          cb_nodes,
     /* Align file domain to the nearest file lock boundary (as specified by
      * striping_unit hint).
      */
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     assert(striping_unit > 0);
 #endif
 
@@ -192,7 +192,7 @@ GIO_Calc_my_req(GIO_File          fh,
     if (fh->fview.size == 0) /* zero-sized request */
         return;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     /* For non-zero sized requests, fh->fview.npairs has been checked and
      * adjusted to a positive number at the beginning of GIO_UFS_read_coll()
      * and GIO_UFS_write_coll().

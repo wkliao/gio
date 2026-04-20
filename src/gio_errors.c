@@ -116,7 +116,7 @@ int GIOI_error_mpi(int         mpi_errorcode,
      */
 
     MPI_Error_string(mpi_errorcode, errorString, &errorStringLen);
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     /* report the world rank */
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);

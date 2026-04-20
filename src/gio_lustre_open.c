@@ -881,9 +881,8 @@ GIO_Lustre_create(GIO_File fh)
     uint64_t pattern;
 #endif
 
-#ifdef WKL_DEBUG
-extern int first_ost_id;
-first_ost_id = -1;
+#if GIO_DEBUG_MODE == 1
+    assert(fh->fstype == GIO_FS_LUSTRE);
 #endif
 
     MPI_Comm_rank(fh->comm, &rank);
@@ -892,10 +891,6 @@ first_ost_id = -1;
     stripe_count = 0;
     start_iodevice = 0;
     numOSTs = 0;
-
-#ifdef GIO_DEBUG
-    assert(fh->fstype == GIO_FS_LUSTRE);
-#endif
 
     /* Note GIO always creates a file with readable and writable permission. */
     old_mask = umask(022);
@@ -1154,12 +1149,7 @@ GIO_Lustre_open(GIO_File fh)
     uint64_t pattern;
 #endif
 
-#ifdef WKL_DEBUG
-extern int first_ost_id;
-first_ost_id = -1;
-#endif
-
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     assert(fh->fstype == GIO_FS_LUSTRE);
 #endif
 
@@ -1265,7 +1255,7 @@ int GIOI_Lustre_open_on_demand(GIO_File fh)
 {
     int err=GIO_NOERR, rank, perm, old_mask;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     assert(fh != NULL);
     assert(fh->is_open == 0);
 #endif

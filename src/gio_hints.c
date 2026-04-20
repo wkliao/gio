@@ -50,7 +50,7 @@
     SET_INFO_STR(key) \
 }
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
 #define CHECK_HINT(hint) { \
     if (fh->hints->hint != root_hints->hint) { \
         char int_str[16]; \

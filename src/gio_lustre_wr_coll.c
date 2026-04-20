@@ -11,6 +11,7 @@
 #include <string.h> /* memcpy(), strerror() */
 #include <unistd.h> /* lseek() */
 #include <errno.h>  /* errno */
+#include <assert.h>
 
 #include "gioi.h"
 
@@ -89,7 +90,7 @@ LUSTRE_Fill_send_buffer(GIO_File        fh,
     GIO_Count len, rem_len, user_buf_idx;
     GIO_Count rem_off;
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     char *orig_ptr;
 #endif
 
@@ -120,7 +121,7 @@ int num_memcpy=0;
                  - fh->bview.rem;
                  /* in case data left to be copied from previous round */
 
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
     /* If this request is not zero-sized, fh->fview.npairs has been adjusted
      * to be a positive number at the call to GIO_write_at_all().
      */
@@ -176,7 +177,7 @@ int num_memcpy=0;
                 user_buf_ptr = same_buf_ptr;
                 if (send_buf != NULL)
                     send_buf_ptr = send_buf[aggr];
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                 /* orig_ptr is for checking whether user_buf_ptr is reused */
                 orig_ptr = user_buf_ptr;
 #endif
@@ -203,7 +204,7 @@ int num_memcpy=0;
 #ifdef WKL_DEBUG
 num_memcpy++;
 #endif
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                             assert(orig_ptr == user_buf_ptr);
                             user_buf_ptr += copy_size;
 #endif
@@ -217,7 +218,7 @@ num_memcpy++;
 #ifdef WKL_DEBUG
 num_memcpy++;
 #endif
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                             assert(orig_ptr == user_buf_ptr);
                             user_buf_ptr += copy_size;
 #endif
@@ -228,7 +229,7 @@ num_memcpy++;
                     fh->bview.idx++;
                     if (fh->bview.idx == fh->bview.npairs) {
                         /* Done with all the copying */
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                         assert(size == size_in_buf);
                         assert(rem_len == len);
                         assert(send_total_size == len);
@@ -238,7 +239,7 @@ num_memcpy++;
                     user_buf_idx = fh->bview.off[fh->bview.idx];
                     fh->bview.rem = fh->bview.len[fh->bview.idx];
                     user_buf_ptr = (char*) buf + user_buf_idx;
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                     /* reset orig_ptr for checking if user_buf_ptr is reused */
                     orig_ptr = user_buf_ptr;
 #endif
@@ -251,7 +252,7 @@ num_memcpy++;
 #ifdef WKL_DEBUG
 num_memcpy++;
 #endif
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
                     assert(orig_ptr == user_buf_ptr);
                     user_buf_ptr += copy_size;
 #endif
@@ -619,7 +620,7 @@ Exchange_data_recv(
         else /* heap-merge is less expensive, proceed to build srt_off_len */
             build_srt_off_len = 1;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         if (build_srt_off_len) {
             gio_wr_count[1]++;
             gio_wr_count[2] = MAX(gio_wr_count[2], srt_off_len->num);
@@ -652,7 +653,7 @@ Exchange_data_recv(
         srt_off_len->off = (GIO_Count*) GIOI_Malloc(alloc_sz * srt_off_len->num);
         srt_off_len->len = (GIO_Count*) (srt_off_len->off + srt_off_len->num);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         double curT = MPI_Wtime();
 #endif
         heap_merge(others_req, recv_count, srt_off_len->off, srt_off_len->len,
@@ -661,7 +662,7 @@ Exchange_data_recv(
         /* Now, (srt_off_len->off and srt_off_len->len) are in an increasing
          * order of file offsets. In addition, they are coalesced.
          */
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         gio_wr_time[5] += MPI_Wtime() - curT;
 #endif
         /* whether or not there are holes */
@@ -1328,7 +1329,7 @@ commit_comm_phase(GIO_File     fh,
     int i, nprocs, rank, nreqs;
     MPI_Request *reqs;
     MPI_Datatype sendType, recvType;
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     int j;
     double dtype_time=MPI_Wtime();
 #endif
@@ -1345,7 +1346,7 @@ commit_comm_phase(GIO_File     fh,
     nreqs = 0;
 
     /* receiving part */
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     /* recv buffer type profiling */
     int nrecvs=0;
     GIO_Count max_r_amnt=0, max_r_count=0;
@@ -1356,7 +1357,7 @@ commit_comm_phase(GIO_File     fh,
             /* check if nothing to receive or if self */
             if (recv_list[i].count == 0 || i == rank) continue;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
             GIO_Count r_amnt=0;
             for (j=0; j<recv_list[i].count; j++)
                 r_amnt += recv_list[i].len[j];
@@ -1389,7 +1390,7 @@ commit_comm_phase(GIO_File     fh,
     }
 
     /* send reqs */
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     /* send buffer type profiling */
     int nsends=0;
     GIO_Count max_s_amnt=0, max_s_count=0;
@@ -1399,7 +1400,7 @@ commit_comm_phase(GIO_File     fh,
         /* check if nothing to send or if self */
         if (send_list[i].count == 0 || i == fh->my_cb_nodes_index) continue;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
         GIO_Count s_amnt=0;
         for (j=0; j<send_list[i].count; j++)
             s_amnt += send_list[i].len[j];
@@ -1423,7 +1424,7 @@ commit_comm_phase(GIO_File     fh,
         MPI_Type_free(&sendType);
     }
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     gio_wr_time[4] += MPI_Wtime() - dtype_time;
 
 /*
@@ -1523,7 +1524,7 @@ LUSTRE_Exch_and_write(GIO_File     fh,
     if ((max_end_off - min_st_off + 1) % step_size)
         ntimes++;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     gio_wr_count[0] = MAX(gio_wr_count[0], ntimes);
 #endif
 
@@ -1860,12 +1861,12 @@ LUSTRE_Exch_and_write(GIO_File     fh,
             /* reset ibuf to the first element of nbufs */
             ibuf = 0;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
             double curT = MPI_Wtime();
 #endif
             /* communication phase */
             commit_comm_phase(fh, send_list, recv_list);
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
             if (fh->is_agg) gio_wr_time[3] += MPI_Wtime() - curT;
 #endif
 
@@ -2026,7 +2027,7 @@ GIO_Lustre_write_coll(GIO_File  fh,
     GIO_Count min_st_off = -1, max_end_off = -1;
     GIO_Count w_len=0;
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
 MPI_Barrier(fh->comm);
 double curT = MPI_Wtime();
 #endif
@@ -2128,7 +2129,7 @@ double curT = MPI_Wtime();
         GIOI_Free(st_end_all);
 
         if (min_st_off == -1 && max_end_off == -1) {
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
             /* Warn a zero-sized collective write */
             if (myrank == 0)
                 printf("\n%s at %d: zero--sized collective write!\n",
@@ -2253,7 +2254,7 @@ double curT = MPI_Wtime();
             cur_off = lseek(fh->fd_sys, 0, SEEK_CUR);
             fsize   = lseek(fh->fd_sys, 0, SEEK_END);
             /* Ignore the error, and proceed as if file size is very large. */
-#ifdef GIO_DEBUG
+#if GIO_DEBUG_MODE == 1
             if (fsize == -1)
                 fprintf(stderr, "%s at %d: lseek SEEK_END failed on file %s (%s)\n",
                         __func__,__LINE__, fh->filename, strerror(errno));
@@ -2304,7 +2305,7 @@ double curT = MPI_Wtime();
     }
 #endif
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[1] += MPI_Wtime() - curT;
 #endif
 
@@ -2349,7 +2350,7 @@ double curT = MPI_Wtime();
     else
         MPI_Allreduce(MPI_IN_PLACE, &w_len, 1, MPI_OFFSET, MPI_MIN, fh->comm);
 
-#if defined(GIO_PROFILING) && (GIO_PROFILING == 1)
+#if GIO_PROFILING_MODE == 1
     if (fh->is_agg) gio_wr_time[0] += MPI_Wtime() - curT;
 #endif
 

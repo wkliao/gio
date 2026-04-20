@@ -15,10 +15,10 @@
 #define GIO_VERSION_PRE   "@GIO_VERSION_PRE@"
 #define GIO_RELEASE_DATE  "DIST_DATE"
 
-#define GIO_MPI_ENABLED   @GIO_MPI_ENABLED@
-#define GIO_DEBUG_MODE    @GIO_DEBUG@
-#define GIO_PROFILING     @GIO_PROFILING@
-#define GIO_THREAD_SAFE   @ENABLE_THREAD_SAFE@
+#define GIO_MPI_ENABLED    @GIO_MPI_ENABLED@
+#define GIO_DEBUG_MODE     @GIO_DEBUG@
+#define GIO_PROFILING_MODE @GIO_PROFILING@
+#define GIO_THREAD_SAFE    @ENABLE_THREAD_SAFE@
 
 #define GIO_NOERR              0
 #define GIO_EEXIST             (-35)  /* file already exists */
