@@ -129,7 +129,8 @@ GIO_open(MPI_Comm    comm,
 
     MPI_Comm_size(comm, &nprocs);
 
-    fh->comm      = comm;
+    MPI_Comm_dup(comm, &fh->comm);
+
     fh->fd_sys    = -1;       /* file has not yet been opened */
     fh->atomicity = 0;
     fh->is_open   = 0;    /* this rank has opened the file */
@@ -172,7 +173,7 @@ GIO_open(MPI_Comm    comm,
         /* use fh->hints->NUMA_ID to construct fh->NUMA_IDs[] */
         fh->NUMA_IDs = (int*) GIOI_Malloc(sizeof(int) * nprocs);
         MPI_Allgather(&fh->hints->NUMA_ID, 1, MPI_INT, fh->NUMA_IDs, 1,
-                      MPI_INT, comm);
+                      MPI_INT, fh->comm);
 
         /* Count number of unique IDs and reassign NUMA ID */
         ids = (int*) GIOI_Calloc(nprocs, sizeof(int));
@@ -188,7 +189,7 @@ GIO_open(MPI_Comm    comm,
         fh->num_NUMAs = num_NUMAs;
     }
     else { /* hint NUMA_ID is not set in info by user */
-        err = construct_NUMA_node_list(comm, &fh->num_NUMAs, &fh->NUMA_IDs);
+        err = construct_NUMA_node_list(fh->comm, &fh->num_NUMAs, &fh->NUMA_IDs);
         if (err != GIO_NOERR) { /* Failed to open the file is a fatal error */
             fh->NUMA_IDs = NULL;
             status = err;
@@ -230,7 +231,7 @@ GIO_open(MPI_Comm    comm,
     }
 
 err_out:
-    MPI_Allreduce(&status, &min_err, 1, MPI_INT, MPI_MIN, comm);
+    MPI_Allreduce(&status, &min_err, 1, MPI_INT, MPI_MIN, fh->comm);
     /* All NC errors are < 0 */
 
     if (min_err != GIO_NOERR) {
