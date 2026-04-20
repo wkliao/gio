@@ -119,12 +119,9 @@ void gioi_add_mem_entry(void       *buf,
     node->buf      = buf;
     node->size     = size;
     node->lineno   = lineno;
-    node->func     = (char*)malloc(strlen(func)+1);
-    node->filename = (char*)malloc(strlen(filename)+1);
-    strcpy(node->func, func);
-    node->func[strlen(func)] = '\0';
-    strcpy(node->filename, filename);
-    node->filename[strlen(filename)] = '\0';
+
+    node->func     = strdup(func);
+    node->filename = strdup(filename);
 
     /* search and add a new item */
     void *ret = tsearch(node, &gioi_mem_root, gioi_cmp);
