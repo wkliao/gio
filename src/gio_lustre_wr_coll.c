@@ -2173,6 +2173,15 @@ double curT = MPI_Wtime();
         if (fh->fview.npairs == 0) /* zero-sized request */
             return 0;
 
+        if (!fh->is_open) {
+            /* If file has not been opened (only happen to non-I/O
+             * aggregators), open it now and obtain hint striping_unit.
+             */
+            int err = GIOI_Lustre_open_on_demand(fh);
+            if (err != GIO_NOERR)
+                return err;
+        }
+
 #ifdef WKL_DEBUG
         printf("%s %d: SWITCH to GIO_UFS_write_indep !!!\n",
                    __func__,__LINE__);

@@ -737,6 +737,22 @@ double curT = MPI_Wtime();
         if (fh->fview.npairs == 0) /* zero-sized request */
             return 0;
 
+        if (!fh->is_open) {
+            /* If file has not been opened (only happen to non-I/O
+             * aggregators), open it now and obtain hint striping_unit.
+             */
+            int err;
+            if (fh->fstype == GIO_FS_LUSTRE)
+                err = GIOI_Lustre_open_on_demand(fh);
+            else if (fh->fstype == GIO_FS_UFS)
+                err = GIOI_UFS_open_on_demand(fh);
+            else
+                err = GIO_EFSTYPE;
+
+            if (err != GIO_NOERR)
+                return err;
+        }
+
         return GIO_UFS_read_indep(fh, buf);
     }
 
