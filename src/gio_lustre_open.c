@@ -49,8 +49,8 @@
     snprintf(int_str, 16, "%d", fh->hints->lustre_num_osts);                \
     MPI_Info_set(fh->info, "lustre_num_osts", int_str);                     \
                                                                             \
-    snprintf(int_str, 16, "%d", fh->hints->lustre_overstriping_ratio);      \
-    MPI_Info_set(fh->info, "lustre_overstriping_ratio", int_str);           \
+    snprintf(int_str, 16, "%d", fh->hints->overstriping_ratio);      \
+    MPI_Info_set(fh->info, "overstriping_ratio", int_str);           \
                                                                             \
     /* collective buffer size must be at least file striping size */        \
     if (fh->hints->cb_buffer_size < fh->hints->striping_unit) {             \
@@ -919,7 +919,7 @@ GIO_Lustre_create(GIO_File fh)
     str_unit           = fh->hints->striping_unit;
     str_factor         = fh->hints->striping_factor;
     start_iodev        = fh->hints->start_iodevice;
-    overstriping_ratio = fh->hints->lustre_overstriping_ratio;
+    overstriping_ratio = fh->hints->overstriping_ratio;
 
     if (overstriping_ratio <= 0) /* hint not set of disabled */
         overstriping_ratio = 1;
@@ -945,7 +945,7 @@ GIO_Lustre_create(GIO_File fh)
      * fh->hints->striping_factor = 0;
      * fh->hints->striping_unit = 0;
      * fh->hints->start_iodevice = -1;
-     * fh->hints->lustre_overstriping_ratio = 1;
+     * fh->hints->overstriping_ratio = 1;
      */
 
     /* Now select file striping configuration for the new file. In many cases,
@@ -1109,7 +1109,7 @@ err_out:
     fh->hints->striping_factor = stripin_info[2];
     fh->hints->start_iodevice  = stripin_info[3];
     fh->hints->lustre_num_osts = stripin_info[4];
-    fh->hints->lustre_overstriping_ratio = stripin_info[2] / stripin_info[4];
+    fh->hints->overstriping_ratio = stripin_info[2] / stripin_info[4];
 
     SET_INFO(fh);
 
@@ -1220,7 +1220,7 @@ err_out:
     fh->hints->striping_factor = stripin_info[2];
     fh->hints->start_iodevice  = stripin_info[3];
     fh->hints->lustre_num_osts = stripin_info[4];
-    fh->hints->lustre_overstriping_ratio = stripin_info[2] / stripin_info[4];
+    fh->hints->overstriping_ratio = stripin_info[2] / stripin_info[4];
 
     SET_INFO(fh);
 

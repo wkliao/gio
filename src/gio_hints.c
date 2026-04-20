@@ -102,7 +102,7 @@ int hint_consistency_check(GIO_File fh)
         CHECK_HINT(cb_nodes);
         CHECK_HINT(cb_buffer_size);
 
-        CHECK_HINT(lustre_overstriping_ratio);
+        CHECK_HINT(overstriping_ratio);
 
         /* hints below are not required to be consistent */
 #if 0
@@ -185,7 +185,7 @@ GIO_set_info(GIO_File fh,
     fh->hints->striping_factor = 0;
     fh->hints->start_iodevice = -1;
     /* Lustre overstriping ratio. 0 or 1 means disabled */
-    fh->hints->lustre_overstriping_ratio = 1;
+    fh->hints->overstriping_ratio = 1;
 
     /* add in user's info --------------------------------------------------*/
 
@@ -229,7 +229,7 @@ GIO_set_info(GIO_File fh,
     GET_INFO_INT(start_iodevice);
 
     /* Lustre overstriping ratio. 0 or 1 means disabled */
-    GET_INFO_INT(lustre_overstriping_ratio);
+    GET_INFO_INT(overstriping_ratio);
 
     /* Check if hint NUMA_ID is set (PnetCDF would set it). */
     GET_INFO_INT(NUMA_ID);

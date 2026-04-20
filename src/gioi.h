@@ -121,7 +121,7 @@ typedef struct {
     int cb_buffer_size;
 
     /* Hints for Lustre file system */
-    int lustre_overstriping_ratio;
+    int overstriping_ratio;
 
     /* hints below are not required to be consistent among all processes */
     int ind_rd_buffer_size;
