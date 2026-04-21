@@ -31,9 +31,6 @@ GIO_open(MPI_Comm    comm,
          MPI_Info    info,
          GIO_File   *handle)
 {
-    /* Before arriving at this subroutine, GIO_FileSysType() should have been
-     * called to check the file system type.
-     */
     int err, min_err, status=GIO_NOERR;
 
     GIOI_File *fh = GIOI_Malloc(sizeof(GIOI_File));
@@ -58,6 +55,9 @@ GIO_open(MPI_Comm    comm,
          */
         goto err_out;
     }
+
+    /* Find the file system type of the file to be opened. */
+    fh->fstype = GIO_FileSysType(filename);
 
     /* Now, create/open the file. Note fh->is_agg, indicating whether this rank
      * is an I/O aggregator,  will be set at the end of create/open calls.
