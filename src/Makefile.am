@@ -8,9 +8,11 @@ SUFFIXES = .a .o .c .h
 
 AM_CPPFLAGS  = -I${srcdir}/src
 
-lib_LTLIBRARIES = libgio.la
-
-nodist_include_HEADERS = gio.h
+if BUILD_AS_SUBPROJECT
+   noinst_LTLIBRARIES = libgio.la
+else
+   lib_LTLIBRARIES = libgio.la
+endif
 
 C_SRCS = gio_lib_version.c \
          gio_open.c \
@@ -40,8 +42,13 @@ C_SRCS = gio_lib_version.c \
 
 libgio_la_SOURCES = $(C_SRCS)
 
-# The script shows the end users how GIO is built
-bin_SCRIPTS = gio-config
+if BUILD_AS_SUBPROJECT
+   noinst_SCRIPTS = gio-config
+else
+   nodist_include_HEADERS = gio.h
+   # The script shows the end users how GIO is built
+   bin_SCRIPTS = gio-config
+endif
 
 EXTRA_DIST = gioi.h
 
@@ -67,6 +74,8 @@ dist-hook:
 # GNU autoconf allows DESTDIR variable when running 'make install' which will
 # prepend it before all installation names.
 install-exec-hook:
-	$(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config
-	chmod +x $(DESTDIR)$(bindir)/gio-config
+	if [ "x$(noinst_SCRIPTS)" = x ] ; then \
+	   $(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config ; \
+	   chmod +x $(DESTDIR)$(bindir)/gio-config ; \
+	fi
 
