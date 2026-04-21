@@ -22,6 +22,13 @@
 
 #include <gioi.h>
 
+#if GIO_PROFILING_MODE == 1
+double    gio_wr_time[NTIMERS];
+double    gio_rd_time[NTIMERS];
+MPI_Count gio_wr_count[NTIMERS];
+MPI_Count gio_rd_count[NTIMERS];
+#endif
+
 /*----< construct_NUMA_node_list() >-----------------------------------------*/
 /* This subroutine is a collective call. It finds the affinity of MPI processes
  * to their shared-memory compute nodes (NUMA) and returns the followings:
@@ -252,6 +259,16 @@ err_out:
         GIOI_Free(fh->NUMA_IDs);
 
     *handle = fh;
+
+#if GIO_PROFILING_MODE == 1
+    {
+        int i;
+        for (i=0; i<NTIMERS; i++) {
+            gio_wr_time[i] = gio_rd_time[i] = 0;
+            gio_wr_count[i]= gio_rd_count[i] = 0;
+        }
+    }
+#endif
 
     return status;
 }
