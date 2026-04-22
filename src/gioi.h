@@ -163,7 +163,7 @@ typedef struct GIOI_File {
     int  num_NUMAs;       /* number of unique NUMA compute nodes */
     int *NUMA_IDs;        /* [nprocs] node ID of each MPI process */
 
-    const char *filename;
+    char *filename;       /* duplicated internal from user's filename */
 
     int fstype;           /* type of file system: GIO_FS_LUSTRE, GIO_FS_UFS */
 

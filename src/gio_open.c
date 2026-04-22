@@ -134,16 +134,29 @@ GIO_open(MPI_Comm    comm,
 
     GIOI_File *fh = GIOI_Malloc(sizeof(GIOI_File));
 
-    MPI_Comm_size(comm, &nprocs);
-
     MPI_Comm_dup(comm, &fh->comm);
 
-    fh->fd_sys    = -1;       /* file has not yet been opened */
+    MPI_Comm_size(fh->comm, &nprocs);
+
+    /* Rudimentary check filename's validity.
+     *
+     * Note MPI standard's requirement for filename argumant is: " ... all
+     * processes must provide filenames that reference the same file. ... The
+     * user is responsible for ensuring that a single file is referenced by the
+     * filename argument, as it may be impossible for an implementation to
+     * detect this type of namespace error."
+     */
+    if (filename == NULL || *filename == '\0') {
+        status = GIO_EBAD_FILE;
+        goto err_out;
+    }
+
+    fh->fd_sys    = -1;    /* file has not yet been opened */
     fh->atomicity = 0;
-    fh->is_open   = 0;    /* this rank has opened the file */
-    fh->is_agg    = 0;    /* whether this rank is an I/O aggregator */
+    fh->is_open   = 0;     /* this rank has opened the file */
+    fh->is_agg    = 0;     /* whether this rank is an I/O aggregator */
     fh->amode     = amode;
-    fh->io_buf    = NULL; /* collective buffer used by aggregators only */
+    fh->io_buf    = NULL;  /* collective buffer used by aggregators only */
     fh->NUMA_IDs  = NULL;
 
     /* allocate and initialize info object */
@@ -162,11 +175,12 @@ GIO_open(MPI_Comm    comm,
     fh->fstype = GIO_FileSysType(filename);
 
     /* Remove the file system type prefix name if there is any. For example,
-     * when path = "lustre:/home/foo/testfile.nc", remove "lustre:" to make
+     * when filename = "lustre:/home/foo/testfile.nc", remove "lustre:" to make
      * filename pointing to "/home/foo/testfile.nc", so it can be used in POSIX
      * access() below.
      */
-    fh->filename = GIOI_remove_file_system_type_prefix(filename);
+    filename = GIOI_remove_file_system_type_prefix(filename);
+    fh->filename = GIOI_Strdup(GIOI_remove_file_system_type_prefix(filename));
 
     /* construct fh->NUMA_IDs[nprocs] and fh->num_NUMAs */
     if (nprocs == 1) {
@@ -250,6 +264,8 @@ err_out:
             MPI_Info_free(&(fh->info));
         if (fh->io_buf != NULL)
             GIOI_Free(fh->io_buf);
+
+        MPI_Comm_free(&fh->comm);
 
         GIOI_Free(fh);
         fh = NULL;
