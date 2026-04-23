@@ -82,19 +82,19 @@ all()
         echo "This $version was built with the following features:"
         echo
 if test "x$profiling_mode" = x1; then
-        echo "  --profiling                 -> enabled"
+        echo "  --profiling     -> enabled"
 else
-        echo "  --profiling                 -> disabled"
+        echo "  --profiling     -> disabled"
 fi
 if test "x$thread_safe_mode" = x1; then
-        echo "  --thread-safe               -> enabled"
+        echo "  --thread-safe   -> enabled"
 else
-        echo "  --thread-safe               -> disabled"
+        echo "  --thread-safe   -> disabled"
 fi
 if test "x$debug_mode" = x1; then
-        echo "  --debug                     -> enabled"
+        echo "  --debug         -> enabled"
 else
-        echo "  --debug                     -> disabled"
+        echo "  --debug         -> disabled"
 fi
         echo
         echo "This $version was built using the following compilers and flags:"
