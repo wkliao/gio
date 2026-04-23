@@ -31,6 +31,7 @@ ptest:
 # "$DESTDIR/$prefix", so one can cd to $DESTDIR and pack the folder $prefix
 # there into a tar ball.
 install-data-hook:
+if ! BUILD_AS_SUBPROJECT
 	@echo '+----------------------------------------------------------------------------+'
 	@echo '|'
 	@echo '|  GIO has been successfully installed under'
@@ -50,7 +51,7 @@ install-data-hook:
 	@echo '|      -I$(prefix)/include'
 	@echo '|'
 	@echo '|  Add the following line to link your program to GIO library:'
-	@echo '|      -L$(exec_prefix)/lib -lGIO'
+	@echo '|      -L$(exec_prefix)/lib -lgio'
 	@echo '|'
 	@if test "x$(enable_shared)" = xyes ; then \
 	 echo '|  Add the following to your run-time environment variable LD_LIBRARY_PATH,' ; \
@@ -65,6 +66,7 @@ install-data-hook:
 	@echo '|      https://github.com/wkliao/gio'
 	@echo '|'
 	@echo '+----------------------------------------------------------------------------+'
+endif
 
 # For VPATH build (parallel build), try delete all sub-directories
 distclean-local:
