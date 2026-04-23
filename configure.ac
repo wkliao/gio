@@ -767,6 +767,7 @@ AC_SUBST(enable_shared)
 AM_CONDITIONAL(BUILD_SHARED_LIB, [test x${enable_shared} = xyes])
 
 AC_OUTPUT
+if test "x$GIO_SUB_BUILD" != xyes ; then
 echo "------------------------------------------------------------------------------"
 echo \
 "
@@ -837,4 +838,4 @@ echo "\
               install  - install GIO library in ${prefix}
 
 ------------------------------------------------------------------------------"
-
+fi
