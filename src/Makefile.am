@@ -12,6 +12,7 @@ if BUILD_AS_SUBPROJECT
    noinst_LTLIBRARIES = libgio.la
 else
    lib_LTLIBRARIES = libgio.la
+   nodist_include_HEADERS = gio.h
 endif
 
 C_SRCS = gio_lib_version.c \
@@ -42,14 +43,6 @@ C_SRCS = gio_lib_version.c \
 
 libgio_la_SOURCES = $(C_SRCS)
 
-if BUILD_AS_SUBPROJECT
-   noinst_SCRIPTS = gio-config
-else
-   nodist_include_HEADERS = gio.h
-   # The script shows the end users how GIO is built
-   bin_SCRIPTS = gio-config
-endif
-
 EXTRA_DIST = gioi.h
 
 CLEANFILES = core core.* *.gcda *.gcno *.gcov gmon.out
@@ -69,13 +62,4 @@ distclean-local:
 
 dist-hook:
 	$(SED_I) -e "s|DIST_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio.h.in
-	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio-config.in
-
-# GNU autoconf allows DESTDIR variable when running 'make install' which will
-# prepend it before all installation names.
-install-exec-hook:
-	if [ "x$(noinst_SCRIPTS)" = x ] ; then \
-	   $(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config ; \
-	   chmod +x $(DESTDIR)$(bindir)/gio-config ; \
-	fi
 

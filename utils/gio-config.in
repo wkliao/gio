@@ -59,16 +59,16 @@ Available values for OPTION include:
   --help                      display this help message and exit
   --all                       display all options
   --cc                        C compiler used to build GIO
-  --cflags                    C compiler flags used to build GIO
   --cppflags                  C pre-processor flags used to build GIO
+  --cflags                    C compiler flags used to build GIO
   --ldflags                   Linker flags used to build GIO
   --libs                      Extra libraries used to build GIO
-  --profiling                 Whether internal profiling is enabled or not
-  --thread-safe               Whether thread-safe capability is enabled or not
-  --debug                     Whether GIO is built with debug mode
   --prefix                    Installation directory
   --includedir                Installation directory containing header files
   --libdir                    Installation directory containing library files
+  --profiling                 Whether internal profiling is enabled or not
+  --thread-safe               Whether thread-safe capability is enabled or not
+  --debug                     Whether GIO is built with debug mode
   --version                   Library version
   --release-date              Date of GIO source was released
   --config-date               Date of GIO library was configured
@@ -82,24 +82,26 @@ all()
         echo "This $version was built with the following features:"
         echo
 if test "x$profiling_mode" = x1; then
-        echo "  --profiling                 -> enabled"
+        echo "  --profiling     -> enabled"
 else
-        echo "  --profiling                 -> disabled"
+        echo "  --profiling     -> disabled"
 fi
 if test "x$thread_safe_mode" = x1; then
-        echo "  --thread-safe               -> enabled"
+        echo "  --thread-safe   -> enabled"
 else
-        echo "  --thread-safe               -> disabled"
+        echo "  --thread-safe   -> disabled"
 fi
 if test "x$debug_mode" = x1; then
-        echo "  --debug                     -> enabled"
+        echo "  --debug         -> enabled"
 else
-        echo "  --debug                     -> disabled"
+        echo "  --debug         -> disabled"
 fi
         echo
         echo "This $version was built using the following compilers and flags:"
         echo
         echo "  --cc            -> $MPICC"
+        echo "  --cppflags      -> $CPPFLAGS"
+        echo "  --cflags        -> $CFLAGS"
         echo "  --ldflags       -> $LDFLAGS"
         echo "  --libs          -> $LIBS"
         echo
@@ -143,13 +145,21 @@ while test $# -gt 0; do
         echo "$MPICC" | sed -e 's/^[ \t]*//'
         ;;
 
+    --cppflags)
+        echo "$CPPFLAGS" | sed -e 's/^[ \t]*//'
+        ;;
+
     --cflags)
         echo "$CFLAGS" | sed -e 's/^[ \t]*//'
         ;;
 
-    --cppflags)
-        echo "$CPPFLAGS" | sed -e 's/^[ \t]*//'
-        ;;
+    --ldflags)
+       echo "$LDFLAGS" | sed -e 's/^[ \t]*//'
+       ;;
+
+    --libs)
+       echo "$LIBS" | sed -e 's/^[ \t]*//'
+       ;;
 
     --prefix)
        echo "$prefix" | sed -e 's/^[ \t]*//'
@@ -161,14 +171,6 @@ while test $# -gt 0; do
 
     --libdir)
        echo "$libdir" | sed -e 's/^[ \t]*//'
-       ;;
-
-    --ldflags)
-       echo "$LDFLAGS" | sed -e 's/^[ \t]*//'
-       ;;
-
-    --libs)
-       echo "$LIBS" | sed -e 's/^[ \t]*//'
        ;;
 
     --version)

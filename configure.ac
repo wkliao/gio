@@ -756,8 +756,8 @@ AM_CONDITIONAL(BUILD_AS_SUBPROJECT, [test "x$GIO_SUB_BUILD" = xyes])
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
-                src/gio-config \
                 utils/Makefile \
+                utils/gio-config \
 )
 
 AC_SUBST(enable_static)

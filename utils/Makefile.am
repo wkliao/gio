@@ -4,7 +4,15 @@
 #
 # @configure_input@
 
-bin_PROGRAMS = gio_version
+if BUILD_AS_SUBPROJECT
+   noinst_SCRIPTS = gio-config
+   noinst_PROGRAMS = gio_version
+else
+   # The script shows the end users how GIO is built
+   bin_SCRIPTS = gio-config
+   bin_PROGRAMS = gio_version
+   dist_man_MANS = gio_version.1
+endif
 
 XDEFS = -DMPICC="\"$(MPICC)\""   -DCFLAGS="\"$(CFLAGS)\""
 XDEFS += -DCONFIGURE_ARGS_CLEAN="\"$(CONFIGURE_ARGS_CLEAN)\""
@@ -13,13 +21,19 @@ XDEFS += -DGIO_VERSION="\"$(GIO_VERSION)\""
 gio_version$(EXEEXT): gio_version.c
 	$(SEQ_CC) $(SEQ_CFLAGS) $(XDEFS) -o $@ $< $(SEQ_LDFLAGS) $(SEQ_LIBS)
 
-dist_man_MANS = gio_version.1
-
 tests-local: all
 
 dist-hook:
+	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio-config.in
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g"           $(distdir)/gio_version.c
 	$(SED_I) -e "s|GIO_RELEASE_VERSION|$(GIO_VERSION)|g"            $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE_FULL|@GIO_RELEASE_DATE_FULL@|g" $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g"           $(distdir)/gio_version.1
 
+# GNU autoconf allows DESTDIR variable when running 'make install' which will
+# prepend it before all installation names.
+install-exec-hook:
+if ! BUILD_AS_SUBPROJECT
+	$(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config ; \
+	chmod +x $(DESTDIR)$(bindir)/gio-config
+endif
