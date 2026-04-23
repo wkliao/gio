@@ -225,10 +225,14 @@ GIO_UFS_read_indep(GIO_File  fh,
          */
         assert(fh->fview.len[0] > 0);
         for (i=1; i<fh->fview.npairs; i++) {
-            assert(fh->fview.off[i-1] < fh->fview.off[i]);
-            assert(fh->fview.off[i-1] + fh->fview.len[i-1] <
-                   fh->fview.off[i]);
             assert(fh->fview.len[i] > 0);
+            assert(fh->fview.off[i-1] < fh->fview.off[i]);
+            assert(fh->fview.off[i-1] + fh->fview.len[i-1] <=
+                   fh->fview.off[i]);
+            /* Note the file view's offset-length pairs if passed from PnetCDF
+             * have been coalesced. Thus,
+             * fh->fview.off[i-1] + fh->fview.len[i-1] < fh->fview.off[i]);
+             */
         }
 #endif
 
