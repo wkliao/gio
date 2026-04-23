@@ -9,17 +9,17 @@
 
 #include "gioi.h"
 
-/*----< GIO_write_at_all() >-----------------------------------------------*/
+/*----< GIO_write_all() >----------------------------------------------------*/
 /* This is a collective call. */
 GIO_Count
-GIO_write_at_all(GIO_File         fh,
-                   const void        *buf,
-                   GIO_Count        file_npairs,
-                   const GIO_Count *file_offs,
-                   const GIO_Count *file_lens,
-                   GIO_Count        buf_npairs,
-                   const GIO_Count *buf_offs,
-                   const GIO_Count *buf_lens)
+GIO_write_all(GIO_File         fh,
+              const void      *buf,
+              GIO_Count        file_npairs,
+              const GIO_Count *file_offs,
+              const GIO_Count *file_lens,
+              GIO_Count        buf_npairs,
+              const GIO_Count *buf_offs,
+              const GIO_Count *buf_lens)
 {
     int err = GIO_NOERR;
     GIO_Count w_len;
@@ -31,7 +31,7 @@ GIO_write_at_all(GIO_File         fh,
         /* When an error occurs above, make this request zero-sized. */
         fh->fview.npairs = fh->bview.npairs = 0;
 
-    /* Must participate collective opertion even an error occurs above */
+    /* Must participate collective operation even an error occurs above */
     if (fh->fstype == GIO_FS_LUSTRE)
         w_len = GIO_Lustre_write_coll(fh, buf);
     else if (fh->fstype == GIO_FS_UFS)

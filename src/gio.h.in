@@ -90,40 +90,24 @@ extern int
 GIO_get_info(GIO_File fh, MPI_Info *info_used);
 
 extern GIO_Count
-GIO_write_at(GIO_File fh, const void *buf,
-                GIO_Count        file_npairs,
-                const GIO_Count *file_offs,
-                const GIO_Count *file_lens,
-                GIO_Count        buf_npairs,
-                const GIO_Count *buf_offs,
-                const GIO_Count *buf_lens);
+GIO_write(GIO_File fh, const void *buf,
+                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
+                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
 
 extern GIO_Count
-GIO_write_at_all(GIO_File fh, const void *buf,
-                GIO_Count        file_npairs,
-                const GIO_Count *file_offs,
-                const GIO_Count *file_lens,
-                GIO_Count        buf_npairs,
-                const GIO_Count *buf_offs,
-                const GIO_Count *buf_lens);
+GIO_write_all(GIO_File fh, const void *buf,
+                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
+                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
 
 extern GIO_Count
-GIO_read_at(GIO_File fh, void *buf,
-                GIO_Count        file_npairs,
-                const GIO_Count *file_offs,
-                const GIO_Count *file_lens,
-                GIO_Count        buf_npairs,
-                const GIO_Count *buf_offs,
-                const GIO_Count *buf_lens);
+GIO_read(GIO_File fh, void *buf,
+                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
+                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
 
 extern GIO_Count
-GIO_read_at_all(GIO_File fh, void *buf,
-                GIO_Count        file_npairs,
-                const GIO_Count *file_offs,
-                const GIO_Count *file_lens,
-                GIO_Count        buf_npairs,
-                const GIO_Count *buf_offs,
-                const GIO_Count  *buf_lens);
+GIO_read_all(GIO_File fh, void *buf,
+                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
+                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
 
 extern int
 GIO_inq_malloc_size(MPI_Count *size);

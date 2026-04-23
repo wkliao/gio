@@ -9,17 +9,17 @@
 
 #include "gioi.h"
 
-/*----< GIO_write_at() >-----------------------------------------------------*/
+/*----< GIO_write() >--------------------------------------------------------*/
 /* This is an independent call. */
 GIO_Count
-GIO_write_at(GIO_File         fh,
-             const void      *buf,
-             GIO_Count        file_npairs,
-             const GIO_Count *file_offs,
-             const GIO_Count *file_lens,
-             GIO_Count        buf_npairs,
-             const GIO_Count *buf_offs,
-             const GIO_Count *buf_lens)
+GIO_write(GIO_File         fh,
+          const void      *buf,
+          GIO_Count        file_npairs,
+          const GIO_Count *file_offs,
+          const GIO_Count *file_lens,
+          GIO_Count        buf_npairs,
+          const GIO_Count *buf_offs,
+          const GIO_Count *buf_lens)
 {
     int err = GIO_NOERR;
     GIO_Count w_len;

@@ -9,17 +9,17 @@
 
 #include "gioi.h"
 
-/*----< GIO_read_at_all() >------------------------------------------------*/
+/*----< GIO_read_all() >-----------------------------------------------------*/
 /* This is a collective call. */
 GIO_Count
-GIO_read_at_all(GIO_File         fh,
-                  void              *buf,
-                  GIO_Count        file_npairs,
-                  const GIO_Count *file_offs,
-                  const GIO_Count *file_lens,
-                  GIO_Count        buf_npairs,
-                  const GIO_Count *buf_offs,
-                  const GIO_Count *buf_lens)
+GIO_read_all(GIO_File         fh,
+             void              *buf,
+             GIO_Count        file_npairs,
+             const GIO_Count *file_offs,
+             const GIO_Count *file_lens,
+             GIO_Count        buf_npairs,
+             const GIO_Count *buf_offs,
+             const GIO_Count *buf_lens)
 {
     int err = GIO_NOERR;
     GIO_Count r_len;
@@ -31,7 +31,7 @@ GIO_read_at_all(GIO_File         fh,
         /* When an error occurs above, make this request zero-sized. */
         fh->fview.npairs = fh->bview.npairs = 0;
 
-    /* Must participate collective opertion even an error occurs above */
+    /* Must participate collective operation even an error occurs above */
     r_len = GIO_UFS_read_coll(fh, buf);
 
     return (err == GIO_NOERR) ? r_len : err;

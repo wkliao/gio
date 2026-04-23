@@ -9,17 +9,17 @@
 
 #include "gioi.h"
 
-/*----< GIO_read_at() >------------------------------------------------------*/
+/*----< GIO_read() >---------------------------------------------------------*/
 /* This is an independent call. */
 GIO_Count
-GIO_read_at(GIO_File         fh,
-            void            *buf,
-            GIO_Count        file_npairs,
-            const GIO_Count *file_offs,
-            const GIO_Count *file_lens,
-            GIO_Count        buf_npairs,
-            const GIO_Count *buf_offs,
-            const GIO_Count *buf_lens)
+GIO_read(GIO_File         fh,
+         void            *buf,
+         GIO_Count        file_npairs,
+         const GIO_Count *file_offs,
+         const GIO_Count *file_lens,
+         GIO_Count        buf_npairs,
+         const GIO_Count *buf_offs,
+         const GIO_Count *buf_lens)
 {
     int err = GIO_NOERR;
     GIO_Count r_len;
