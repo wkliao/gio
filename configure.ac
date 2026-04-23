@@ -758,6 +758,8 @@ AC_CONFIG_FILES(Makefile \
                 src/gio.h \
                 utils/Makefile \
                 utils/gio-config \
+                utils/packaging/Makefile \
+                utils/packaging/gio.pc \
 )
 
 AC_SUBST(enable_static)

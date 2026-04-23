@@ -4,6 +4,8 @@
 #
 # @configure_input@
 
+SUBDIRS = packaging
+
 if BUILD_AS_SUBPROJECT
    noinst_SCRIPTS = gio-config
    noinst_PROGRAMS = gio_version
@@ -37,3 +39,19 @@ if ! BUILD_AS_SUBPROJECT
 	$(SED_I) -e 's|INSTALL_PREFIX|$(prefix)|g ; s|INSTALL_EXEC_PREFIX|$(exec_prefix)|g' $(DESTDIR)$(bindir)/gio-config ; \
 	chmod +x $(DESTDIR)$(bindir)/gio-config
 endif
+
+# For VPATH build (parallel build), try delete all sub-directories
+distclean-local:
+	@for d in $(SUBDIRS) ; do \
+        if [ "$$d" = "." ] ; then continue ; fi ; \
+        if [ -d $$d/.deps ] ; then rmdir $$d/.deps || true ; fi ; \
+    done ; \
+    if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+       for d in $(SUBDIRS) ; do \
+           if [ "$$d" = "." ] ; then \
+              continue ; \
+           fi ; \
+           rmdir $$d || true ; \
+       done ; \
+    fi
+
