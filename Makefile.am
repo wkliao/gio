@@ -6,8 +6,8 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src
-DIST_SUBDIRS = src
+SUBDIRS = src utils
+DIST_SUBDIRS = src utils
 
 EXTRA_DIST = INSTALL.md \
              README.md \

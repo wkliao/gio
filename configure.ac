@@ -692,6 +692,28 @@ fi
 AC_SUBST([FSTYPE_PREFIX])
 AC_DEFINE_UNQUOTED(TESTOUTDIR, ["$TESTOUTDIR"], [Output directory for tests])
 
+# SEQ_CC is used to compile programs to be run sequentially, such as
+# gio_version. Below we use the same C compiler as MPICC.
+AC_ARG_VAR(SEQ_CC, [C compiler for building sequential utility programs, @<:@default: gcc@:>@])
+if test "x$SEQ_CC" = x ; then
+   if test "x$ac_cv_mpi_compiler_base_MPICC" = x ; then
+      # gcc should be available on most of the machines today
+      AC_PATH_PROG([SEQ_CC], [gcc], [$MPICC])
+   else
+      SEQ_CC=$ac_cv_mpi_compiler_base_MPICC
+   fi
+fi
+AC_MSG_CHECKING([C compiler for serial utility programs])
+AC_MSG_RESULT([$SEQ_CC])
+AC_SUBST(SEQ_CC)
+
+AC_ARG_VAR(SEQ_CFLAGS, [C compile flags for building sequential utility programs, @<:@default: none@:>@])
+AC_SUBST(SEQ_CFLAGS)
+AC_ARG_VAR(SEQ_LDFLAGS, [Linker flags for building sequential utility programs, @<:@default: none@:>@])
+AC_SUBST(SEQ_LIBS)
+AC_ARG_VAR(SEQ_LIBS, [Libraries for building sequential utility programs, @<:@default: none@:>@])
+AC_SUBST(SEQ_LIBS)
+
 # Configuration Date
 # Note that command 'date' is not portable across Unix platforms
 if test "x$SOURCE_DATE_EPOCH" != x ; then
@@ -735,6 +757,7 @@ AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
                 src/gio-config \
+                utils/Makefile \
 )
 
 AC_SUBST(enable_static)
@@ -783,6 +806,22 @@ fi
 if test "x${LIBS}" != x ; then
    echo "\
               LIBS        = ${LIBS}"
+fi
+if test "x${SEQ_CC}" != x ; then
+   echo "\
+              SEQ_CC      = ${SEQ_CC}"
+fi
+if test "x${SEQ_CFLAGS}" != x ; then
+   echo "\
+              SEQ_CFLAGS  = ${SEQ_CFLAGS}"
+fi
+if test "x${SEQ_LDFLAGS}" != x ; then
+   echo "\
+              SEQ_LDFLAGS = ${SEQ_LDFLAGS}"
+fi
+if test "x${SEQ_LIBS}" != x ; then
+   echo "\
+              SEQ_LIBS    = ${SEQ_LIBS}"
 fi
 echo "\
 
