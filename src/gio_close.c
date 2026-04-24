@@ -41,8 +41,8 @@ void print_profiled(MPI_Comm comm)
     if (rank == 0 && gio_wr_count[0] > 0) {
         printf("GIO write time: init %.2f pwrite %.2f pread %.2f post %.2f hsort %.2f comm %.2f total %.2f\n",
         gio_wr_time[1], gio_wr_time[2], gio_rd_time[2], gio_wr_time[4], gio_wr_time[5], gio_wr_time[3], gio_wr_time[0]);
-        printf("GIO write count: ntimes %lld check_hole %lld (npairs %lld nrecv %lld) no check %lld (npairs %lld nrecv %lld)\n",
-        gio_wr_count[0], gio_wr_count[1], gio_wr_count[2], gio_wr_count[3], gio_wr_count[4], gio_wr_count[5], gio_wr_count[6]);
+        printf("GIO write count: ntimes %lld check_hole %lld (npairs %lld nrecv %lld) no check %lld (npairs %lld nrecv %lld) num_memcpy %lld\n",
+        gio_wr_count[0], gio_wr_count[1], gio_wr_count[2], gio_wr_count[3], gio_wr_count[4], gio_wr_count[5], gio_wr_count[6], gio_wr_count[8]);
     }
 
     /* print 2-phase read timers */

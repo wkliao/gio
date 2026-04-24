@@ -94,8 +94,8 @@ LUSTRE_Fill_send_buffer(GIO_File        fh,
     char *orig_ptr;
 #endif
 
-#ifdef WKL_DEBUG
-int num_memcpy=0;
+#if GIO_PROFILING_MODE == 1
+    int num_memcpy=0;
 #endif
 
     *self_buf = NULL;
@@ -201,8 +201,8 @@ int num_memcpy=0;
                              */
                             isUserBuf = 0;
                             memcpy(send_buf_ptr, user_buf_ptr, copy_size);
-#ifdef WKL_DEBUG
-num_memcpy++;
+#if GIO_PROFILING_MODE == 1
+                            num_memcpy++;
 #endif
 #if GIO_DEBUG_MODE == 1
                             assert(orig_ptr == user_buf_ptr);
@@ -215,8 +215,8 @@ num_memcpy++;
                              * send, copy over the remaining delayed data
                              */
                             memcpy(send_buf_ptr, user_buf_ptr, copy_size);
-#ifdef WKL_DEBUG
-num_memcpy++;
+#if GIO_PROFILING_MODE == 1
+                            num_memcpy++;
 #endif
 #if GIO_DEBUG_MODE == 1
                             assert(orig_ptr == user_buf_ptr);
@@ -249,8 +249,8 @@ num_memcpy++;
                      * user buf to send, copy over the remaining delayed data
                      */
                     memcpy(send_buf_ptr, user_buf_ptr, copy_size);
-#ifdef WKL_DEBUG
-num_memcpy++;
+#if GIO_PROFILING_MODE == 1
+                    num_memcpy++;
 #endif
 #if GIO_DEBUG_MODE == 1
                     assert(orig_ptr == user_buf_ptr);
@@ -298,8 +298,8 @@ num_memcpy++;
         rem_len = fh->fview.rem;
     }
 
-#ifdef WKL_DEBUG
-if (num_memcpy> 0) printf("---- fh->fview.npairs=%lld fh->fview.idx=%lld bview.npairs=%lld num_memcpy=%d\n",fh->fview.npairs,fh->fview.idx,fh->bview.npairs,num_memcpy);
+#if GIO_PROFILING_MODE == 1
+    gio_wr_count[8] = MAX(num_memcpy, gio_wr_count[8]);
 #endif
 }
 
@@ -1154,7 +1154,7 @@ LUSTRE_Calc_others_req(GIO_File           fh,
             }
         }
 
-#ifdef WKL_DEBUG
+#if GIO_DEBUG_MODE == 1
 /* WRF hangs below when calling MPI_Waitall(), at running 16 nodes, 128 ranks
  * per node on Perlmutter, when these 3 env variables are set:
  *    FI_UNIVERSE_SIZE        = 2048
@@ -1986,7 +1986,7 @@ LUSTRE_Exch_and_write(GIO_File     fh,
         GIOI_Free(recv_list);
     }
 
-#ifdef WKL_DEBUG
+#if GIO_DEBUG_MODE == 1
     /* check any pending messages to be received */
     MPI_Status probe_st;
     int probe_flag;
@@ -2182,10 +2182,7 @@ double curT = MPI_Wtime();
                 return err;
         }
 
-#ifdef WKL_DEBUG
-        printf("%s %d: SWITCH to GIO_UFS_write_indep !!!\n",
-                   __func__,__LINE__);
-#endif
+// if (myrank == 0) printf("%s %d: SWITCH to GIO_UFS_write_indep !!!\n",__func__,__LINE__);
         return GIO_UFS_write_indep(fh, buf);
     }
 
@@ -2216,7 +2213,7 @@ double curT = MPI_Wtime();
                 fh->io_buf = (void*) GIOI_Calloc(1, fh->hints->cb_buffer_size);
             }
         }
-#ifdef WKL_DEBUG
+#if GIO_DEBUG_MODE == 1
         if (myrank == 0)
             printf("Warning: %s line %d: Change striping_unit from %d to %d\n",
                    __func__, __LINE__, orig_striping_unit, fh->hints->striping_unit);
