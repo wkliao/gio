@@ -127,7 +127,8 @@ GIO_UFS_write_indep(GIO_File    fh,
 
     if (fh->fview.npairs <= 1 && fh->bview.npairs <= 1) {
         /* Both buffer and fileview are contiguous. */
-        return GIO_UFS_write_contig(fh, buf, fh->bview.size,
+        ptr = (char*)buf + fh->bview.off[0];
+        return GIO_UFS_write_contig(fh, ptr, fh->bview.size,
                                       fh->fview.off[0], 0);
     }
 
@@ -154,7 +155,7 @@ GIO_UFS_write_indep(GIO_File    fh,
         fh->fview.npairs <= 1) {
 
         if (fh->bview.npairs <= 1) { /* use buf directly to write */
-            tmp_buf = (char*)buf;
+            tmp_buf = (char*)buf + fh->bview.off[0];
             buf_rem = fh->bview.size;
             ntimes = 1;
             tmp_buf_size = fh->bview.size;
@@ -172,7 +173,7 @@ GIO_UFS_write_indep(GIO_File    fh,
         file_rem = fh->fview.len[0];
 
         /* pointer to buf, starting location to copy over to tmp_buf */
-        cpy_ptr = (char*)buf;
+        cpy_ptr = (char*)buf + fh->bview.off[0];
 
         k = (fh->bview.npairs <= 1) ? 1 : 0; /* whether to skip while loop k */
         j = 0;
@@ -275,7 +276,7 @@ GIO_UFS_write_indep(GIO_File    fh,
         buf_rem  = fh->bview.len[0];
 
         /* pointer to buf, starting location to copy over to tmp_buf */
-        cpy_ptr = (char*)buf;
+        cpy_ptr = (char*)buf + fh->bview.off[0];
 
         disp = 0;
         k = 0; /* index pointed to bview's  offset-length pairs */
