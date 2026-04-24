@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>  /* memcpy() */
 #include <stdbool.h> /* type bool */
-#include <limits.h>  /* LLONG_MAX */
+#include <limits.h>  /* LLONG_MAX, INT_MAX */
 
 #include "gioi.h"
 
@@ -22,12 +22,11 @@
         buf_incr -= size_in_buf;                                    \
         if (buf_incr > 0 && buf_rem == 0) {                         \
             buf_indx++;                                             \
-            user_buf_idx = fh->bview.off[buf_indx];              \
-            buf_rem = fh->bview.len[buf_indx];                   \
+            user_buf_idx = fh->bview.off[buf_indx];                 \
+            buf_rem = fh->bview.len[buf_indx];                      \
         }                                                           \
     }                                                               \
 }
-
 
 #define BUF_COPY {                                                  \
     while (size) {                                                  \
@@ -41,24 +40,24 @@
         buf_incr -= size_in_buf;                                    \
         if (size > 0 && buf_rem == 0) {                             \
             buf_indx++;                                             \
-            user_buf_idx = fh->bview.off[buf_indx];              \
-            buf_rem = fh->bview.len[buf_indx];                   \
+            user_buf_idx = fh->bview.off[buf_indx];                 \
+            buf_rem = fh->bview.len[buf_indx];                      \
         }                                                           \
     }                                                               \
     BUF_INCR                                                        \
 }
 
 /*----< fill_user_buffer() >-------------------------------------------------*/
-/* This subroutine is only called when bview is not contiguous. */
+/* This subroutine is only called when buffer view is not contiguous. */
 static void
-fill_user_buffer(GIO_File        fh,
-                 void             *buf,
+fill_user_buffer(GIO_File         fh,
+                 void            *buf,
                  GIO_Count        min_st_off,
                  GIO_Count        fd_size,
                  const GIO_Count *fd_end,         /* IN: [cb_nodes] */
-                 const GIO_Count  *recv_size,      /* IN: [nprocs] */
-                 GIO_Count        *recd_from_proc, /* IN/OUT: [nprocs] */
-                 char *const      *recv_buf)       /* IN: [nprocs] */
+                 const GIO_Count *recv_size,      /* IN: [nprocs] */
+                 GIO_Count       *recd_from_proc, /* IN/OUT: [nprocs] */
+                 char *const     *recv_buf)       /* IN: [nprocs] */
 {
     int i, nprocs, aggr, buf_indx;
     GIO_Count buf_rem, size_in_buf, buf_incr, size;
@@ -144,19 +143,20 @@ fill_user_buffer(GIO_File        fh,
     GIOI_Free(curr_from);
 }
 
+/*----< R_Exchange_data() >--------------------------------------------------*/
 static GIO_Count
 R_Exchange_data(GIO_File          fh,
-                void               *buf,
-                const GIO_Count    *send_size,      /* IN: [nprocs] */
-                const GIO_Count    *count,          /* IN: [nprocs] */
-                const GIO_Count    *start_pos,      /* IN: [nprocs] */
-                const GIO_Count    *partial_send,   /* IN: [nprocs] */
-                GIO_Count          *recd_from_proc, /* IN/OUT: [nprocs] */
-                GIO_Count          min_st_off,
-                GIO_Count          fd_size,
-                const GIO_Count   *fd_end,         /* IN: [cb_nodes] */
+                void             *buf,
+                const GIO_Count  *send_size,      /* IN: [nprocs] */
+                const GIO_Count  *count,          /* IN: [nprocs] */
+                const GIO_Count  *start_pos,      /* IN: [nprocs] */
+                const GIO_Count  *partial_send,   /* IN: [nprocs] */
+                GIO_Count        *recd_from_proc, /* IN/OUT: [nprocs] */
+                GIO_Count         min_st_off,
+                GIO_Count         fd_size,
+                const GIO_Count  *fd_end,         /* IN: [cb_nodes] */
                 const GIO_Access *others_req,     /* IN: [nprocs] */
-                GIO_Count           *buf_idx)        /* IN/OUT: [nprocs] */
+                GIO_Count        *buf_idx)        /* IN/OUT: [nprocs] */
 {
     char **recv_buf = NULL;
     int i, nprocs, myrank, nrecvs, nsends;
@@ -179,7 +179,7 @@ R_Exchange_data(GIO_File          fh,
      * receive from whom and how much memory to allocate.
      *
      * recv_size[] is the total size of data to be received from each process
-     * in a round.
+     * in a 2-phase round.
      */
     recv_size = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
 
@@ -187,9 +187,9 @@ R_Exchange_data(GIO_File          fh,
 
     reqs = (MPI_Request*) GIOI_Malloc(sizeof(MPI_Request) * 2 * nprocs);
 
-    /* Post nonblocking receive calls. If bview is contiguous, data can be
-     * directly received into user buf at location given by buf_idx. Otherwise,
-     * allocate recv_buf and use it to receive.
+    /* Post nonblocking receive calls. If buffer view is contiguous, data can
+     * be directly received into user buf at location pointed by buf_idx.
+     * Otherwise, allocate recv_buf and use it to receive.
      */
     nrecvs = 0;
     if (fh->bview.npairs <= 1) {
@@ -234,7 +234,7 @@ R_Exchange_data(GIO_File          fh,
     nsends = 0;
     for (i=0; i<nprocs; i++) {
         if (send_size[i]) {
-            /* take care the last off-len pair if is a partial send */
+            /* take care the last offset-length pair if is a partial send */
             GIO_Count tmp = 0;
             GIO_Count k = 0;
             if (partial_send[i]) {
@@ -308,7 +308,7 @@ R_Exchange_data(GIO_File          fh,
     GIOI_Free(reqs);
     GIOI_Free(recv_size);
 
-    if (fh->bview.npairs > 1) { /* bview is noncontiguous */
+    if (fh->bview.npairs > 1) { /* buffer view is noncontiguous */
         GIOI_Free(recv_buf[0]);
         GIOI_Free(recv_buf);
     }
@@ -321,14 +321,15 @@ R_Exchange_data(GIO_File          fh,
  * sends read data to the requesting processes. All processes place nonblocking
  * receive calls to receive read data into user buffer. The idea is to reduce
  * the amount of extra memory required for collective I/O. If all data were
- * read all at once, which is much easier, it would require allocating a
- * temporary space more than the size of user_buf, which is often unacceptable.
- * For example, to read a distributed array from a file, where each local array
- * is 8 MiB, requiring at least another 8 MiB of space is unacceptable.
+ * read all at once, which is much easier, it would require a lot of temp space
+ * allocated at the I/O aggregators, which is often unacceptable. For example,
+ * to collectively read a distributed array from a file, where each local array
+ * is 8 MiB and there are 8 processes per I/O aggregator, requiring at least
+ * another 8 MiB of temp space may be unacceptable.
  */
 static GIO_Count
 Read_and_exch(GIO_File          fh,
-              void               *buf,
+              void             *buf,
               const GIO_Access *others_req, /* IN: [nprocs] */
               GIO_Count         min_st_off,
               GIO_Count         fd_size,
@@ -385,8 +386,8 @@ Read_and_exch(GIO_File          fh,
     gio_rd_count[0] = MAX(gio_rd_count[0], max_ntimes);
 #endif
 
-    /* curr_offlen_ptr[] is the current off-len pair in others_req[] being
-     * processed for each process. It must be initialized to 0s.
+    /* curr_offlen_ptr[] is the current offset-length pair in others_req[]
+     * being processed for each process. It must be initialized to 0s.
      */
     curr_offlen_ptr = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
 
@@ -395,20 +396,20 @@ Read_and_exch(GIO_File          fh,
      */
     start_pos = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
 
-    /* If only a portion of the last off-len pair is sent to an aggregator in a
-     * round, then partial_send[] stores that send amount. It must be
-     * initialized to 0s.
+    /* If only a portion of the last offset-length pair is sent to an
+     * aggregator in a round, then partial_send[] stores that send amount. It
+     * must be initialized to 0s.
      */
     partial_send = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
 
-    /* recd_from_proc[] stores the amount of data so far this aggregator
-     * received from each process. It will be only used and updated in
+    /* recd_from_proc[] stores the amount of data so far this aggregator has
+     * received from each process. It will only be used and updated in
      * fill_user_buffer(). It must be initialized to 0s.
      */
     recd_from_proc = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
 
-    /* count[] is the number of off-len pairs of each process that will be
-     * processes during a round. It must be initialized to 0s.
+    /* count[] is the number of offset-length pairs of each process that will
+     * be processes during a round. It must be initialized to 0s.
      */
     count = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
 
@@ -428,7 +429,7 @@ Read_and_exch(GIO_File          fh,
 
         /* Since MPI standard requires that displacements in filetypes are
          * sorted in a monotonically non-decreasing order, I can maintain a
-         * pointer, curr_offlen_ptr, to the current off-len pair being
+         * pointer, curr_offlen_ptr, to the current offset-length pair being
          * processed for each process in others_req[] and scan further only
          * from there.
          *
@@ -478,7 +479,7 @@ Read_and_exch(GIO_File          fh,
                     assert(for_curr_round + rem_size <= cb_buffer_size);
 #endif
                     r_len = GIO_UFS_read_contig(fh, read_buf + for_curr_round,
-                                                  rem_size, rem_off);
+                                                rem_size, rem_off);
                     if (r_len < 0) {
                         total_r_len = r_len;
                         goto err_out;
@@ -515,7 +516,7 @@ done_read:
                     req_off = others_req[i].offsets[j] + partial_send[i];
                     req_len = others_req[i].lens[j]    - partial_send[i];
                     partial_send[i] = 0;
-                    /* modify the off-len pair to reflect this change */
+                    /* modify the offset-length pair to reflect this change */
                     others_req[i].offsets[j] = req_off;
                     others_req[i].lens[j]    = req_len;
                 } else {
@@ -551,7 +552,8 @@ done_read:
                                              real_off + real_size -
                                              others_req[i].offsets[j + 1]);
                         /* max because it must cover requests from different
-                         * processes */
+                         * processes
+                         */
                         assert(0);
                     }
 #endif
@@ -628,7 +630,7 @@ offset_compare(const void *a, const void *b)
 /*----< GIO_UFS_read_coll() >----------------------------------------------*/
 GIO_Count
 GIO_UFS_read_coll(GIO_File  fh,
-                    void       *buf)
+                  void     *buf)
 {
     /* Uses a generalized version of the extended two-phase method described in
      * "An Extended Two-Phase Method for Accessing Sections of Out-of-Core
@@ -661,9 +663,19 @@ double curT = MPI_Wtime();
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &rank);
 
-    /* Unlike MPI-IO, the fileview, fh->fview, will not be reused across
-     * two or more I/O calls.
+    /* Unlike MPI-IO, GIO never reuses a file view across two or more GIO
+     * calls. As fh->fview will be reset right after this subroutine returns,
+     * it can be modify within this subroutine.
      */
+
+#if GIO_DEBUG_MODE == 1
+    if (fh->fview.size > 0) {
+        assert(fh->fview.npairs > 0);
+        assert(fh->fview.off != NULL);
+        assert(fh->fview.len != NULL);
+    }
+    assert(fh->fview.size == fh->bview.size);
+#endif
 
     /* only check for interleaving if cb_read isn't disabled */
     if (fh->hints->cb_read != GIO_HINT_DISABLE) {
@@ -673,14 +685,13 @@ double curT = MPI_Wtime();
          * represents a file range from the very first byte offset accessed by
          * this rank till the end offset (exclusively).
          *
-         * Note fview.off[] is always relative to beginning of file.
+         * Note fview.off[] is always relative to the beginning of file.
          *
          * All processes gather the aggregate access regions of all other
          * processes in order to tell whether there is an interleaving access
          * among all.
          */
-        st_end_all = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * 2 *
-                                                  nprocs);
+        st_end_all = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * 2 * nprocs);
         if (fh->fview.size == 0)
             /* set to -1 to indicate zero-sized request */
             st_end_all[2*rank] = st_end_all[2*rank+1] = -1;
@@ -693,11 +704,11 @@ double curT = MPI_Wtime();
         MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, st_end_all, 2,
                       MPI_OFFSET, fh->comm);
 
-        /* Check whether access ranges of all processes are interleaved.  In
+        /* Check whether access ranges of all processes are interleaved. In
          * the meantime, find global minimum starting offset and maximum end
          * offset:
-         * min_st_off  - starting file offset of the aggregate access region
-         * max_end_off - end file offset of the aggregate access region
+         *   min_st_off  - starting file offset of the aggregate access region
+         *   max_end_off - end file offset of the aggregate access region
          */
         qsort(st_end_all, nprocs, sizeof(GIO_Count)*2, offset_compare);
 
@@ -719,14 +730,15 @@ double curT = MPI_Wtime();
         }
         GIOI_Free(st_end_all);
 
+        /* Check if this collective read is entirely zero-sized. */
         if (min_st_off == -1 && max_end_off == -1) {
 #if GIO_DEBUG_MODE == 1
             /* Warn a zero-sized collective request */
             if (rank == 0)
                 printf("%s at %d: zero--sized collective read!\n",
                        __func__,__LINE__);
-            return 0;
 #endif
+            return 0;
         }
     }
 
@@ -743,6 +755,7 @@ double curT = MPI_Wtime();
              */
             int err;
             if (fh->fstype == GIO_FS_LUSTRE)
+                /* This subroutine is also used by Lustre's collective read. */
                 err = GIOI_Lustre_open_on_demand(fh);
             else if (fh->fstype == GIO_FS_UFS)
                 err = GIOI_UFS_open_on_demand(fh);
@@ -753,31 +766,33 @@ double curT = MPI_Wtime();
                 return err;
         }
 
+// if (rank == 0) printf("%s %d: SWITCH to GIO_UFS_read_indep !!!\n",__func__,__LINE__);
         return GIO_UFS_read_indep(fh, buf);
     }
-
-    /* We now proceed to perform the true collective read, i.e. two-phase I/O.
+    /* We now proceed to perform two-phase I/O.
+     *
      * At first, a call to GIO_Calc_file_domains() to calculate the file
      * domains assigned to each I/O aggregator. fh->hints->cb_nodes is the
-     * number of aggregators. The aggregate access region of a collective read
-     * call is divided among all aggregators into a set of disjoined file
-     * domains. A file domain (denoted as 'fd') is the set of contiguous file
-     * regions an aggregator is responsible for their file access. Other
-     * processes must send their requests to an aggregator when their requests
-     * fall into the aggregator's file domain. Non-aggregators are not assigned
-     * a file domain. fh->is_agg tells whether this rank is an aggregator.
+     * number of aggregators. The aggregate access region of this collective
+     * read call is divided among all aggregators into a set of disjoined file
+     * domains. A file domain (denoted as 'fd') is the set of file regions an
+     * aggregator is responsible for their file access. Thus, a file domain is
+     * only relevant to I/O aggregators. All processes must send their requests
+     * to an aggregator for the portions that fall into the aggregator's file
+     * domain. Non-aggregators are not assigned a file domain. fh->is_agg
+     * tells whether this rank is an aggregator.
      *
      * GIO_Calc_file_domains() set the following 2 variables:
-     *   fd_end[cb_nodes] - end location of file domains, exclusive offsets.
+     *   fd_end[cb_nodes] - end location of file domains, inclusive offsets.
      *      The values are indexed by an aggregator number; they needs to be
      *      mapped to actual rank IDs in the communicator later.
      *   fd_size - average size (ceiling) of file domain among cb_nodes.
      */
     GIO_Calc_file_domains(fh->hints->cb_nodes, fh->hints->striping_unit,
-                            min_st_off, max_end_off, &fd_end, &fd_size);
+                          min_st_off, max_end_off, &fd_end, &fd_size);
 
     /* GIO_Calc_my_req() calculates what portions of this rank's requests
-     * fall into which aggregator's file domains. It set the following
+     * fall into every aggregator's file domains. It sets the following
      * variables:
      *   my_req_naggr - number of aggregators for which this rank has a portion
      *      of its request falling into their file domains
@@ -792,17 +807,17 @@ double curT = MPI_Wtime();
     count_per_aggr = GIOI_Calloc(nprocs, sizeof(GIO_Count));
 
     GIO_Calc_my_req(fh, min_st_off, fd_end, fd_size, &my_req_naggr,
-                      count_per_aggr, &my_req, &buf_idx);
+                    count_per_aggr, &my_req, &buf_idx);
 
-    /* GIO_Calc_others_req() produces results that are only relevant to the
-     * I/O aggregators. Based on every rank's my_req, it calculates through MPI
-     * communication for the portions of requests of all processes that fall
-     * into this aggregator's file domain. It sets the following variable:
+    /* GIO_Calc_others_req() produces results that are only relevant to the I/O
+     * aggregators. Based on every rank's my_req, it calculates what portions
+     * of requests from all processes that fall into this aggregator's file
+     * domain. Note MPI communication is performed inside this subroutine. It
+     * sets the following variable:
      *   others_req[nprocs] - metadata describing all processes' requests to be
      *      carried out by this aggregator.
      */
-    GIO_Calc_others_req(fh, my_req_naggr, count_per_aggr, my_req,
-                          &others_req);
+    GIO_Calc_others_req(fh, my_req_naggr, count_per_aggr, my_req, &others_req);
 
     GIOI_Free(count_per_aggr);
 
@@ -829,6 +844,7 @@ double curT = MPI_Wtime();
     if (fh->is_agg) gio_rd_time[0] += MPI_Wtime() - curT;
 #endif
 
+    /* All PnetCDF error codes are negative. */
     return (r_len < 0) ? r_len : total_r_len;
 }
 
