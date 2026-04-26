@@ -756,7 +756,7 @@ int Lustre_set_cb_node_list(GIO_File fh)
             int avg = num_aggr / striping_factor;
             int stride = fh->num_NUMAs / striping_factor;
             if (num_aggr % striping_factor) avg++;
-            for (i = 0; i < num_aggr; i++) {
+            for (i=0; i<num_aggr; i++) {
                 /* j is the selected node ID. This selection is round-robin
                  * across selected nodes.
                  */
@@ -772,22 +772,26 @@ int Lustre_set_cb_node_list(GIO_File fh)
          * aggregators are selected from all nodes. Within each node,
          * aggregators are spread evenly instead of the first few ranks.
          */
-        int *naggr_per_node, *idx_per_node, avg;
-        idx_per_node = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
+        int *naggr_per_node, avg, max_nprocs, min_nprocs;
         naggr_per_node = (int*) GIOI_Malloc(sizeof(int) * fh->num_NUMAs);
-        for (i = 0; i < striping_factor % fh->num_NUMAs; i++)
+        for (i=0; i<striping_factor % fh->num_NUMAs; i++)
             naggr_per_node[i] = striping_factor / fh->num_NUMAs + 1;
-        for (; i < fh->num_NUMAs; i++)
+        for (; i<fh->num_NUMAs; i++)
             naggr_per_node[i] = striping_factor / fh->num_NUMAs;
         avg = num_aggr / striping_factor;
         if (avg > 0)
-            for (i = 0; i < fh->num_NUMAs; i++)
+            for (i=0; i<fh->num_NUMAs; i++)
                 naggr_per_node[i] *= avg;
-        for (i = 0; i < fh->num_NUMAs; i++)
+
+        max_nprocs = min_nprocs = nprocs_per_node[0];
+        for (i=0; i<fh->num_NUMAs; i++) {
             naggr_per_node[i] = MIN(naggr_per_node[i], nprocs_per_node[i]);
-        /* naggr_per_node[] is the number of aggregators that can be
-         * selected as I/O aggregators
-         */
+            /* naggr_per_node[i] is the number of aggregators on node i that
+             * can be selected as I/O aggregators
+             */
+            max_nprocs = MAX(max_nprocs, nprocs_per_node[i]);
+            min_nprocs = MIN(min_nprocs, nprocs_per_node[i]);
+        }
 
         if (block_assignment) {
             int n = 0;
@@ -804,20 +808,49 @@ int Lustre_set_cb_node_list(GIO_File fh)
                 }
             }
         }
-        else {
-            for (i = 0; i < num_aggr; i++) {
-                int stripe_i = i % striping_factor;
-                j = stripe_i % fh->num_NUMAs; /* select from node j */
-                k = nprocs_per_node[j] / naggr_per_node[j];
-                k *= idx_per_node[j];
-                /* try stride==1 seems no effect, k = idx_per_node[j]; */
-                idx_per_node[j]++;
-                assert(k < nprocs_per_node[j]);
-                fh->hints->aggr_ranks[i] = ranks_per_node[j][k];
+        else { /* round-robin assignment */
+            /* Because striping_factor > fh->num_NUMAs, we select the number of
+             * aggregators == striping_factor (number of OSTs), which still
+             * maintain the fact that an OST receives requests coming from one
+             * and only one node.
+             */
+
+            /* selected[i] is the number of processes from node i has been
+             * selected as aggregators.
+             */
+            int *selected = (int*) GIOI_Calloc(fh->num_NUMAs, sizeof(int));
+
+            if (max_nprocs - min_nprocs <= 1) {
+                /* Codes in this block only works when the numbers of processes
+                 * per NUMA node are equal or only differ in 1. Otherwise, the
+                 * line of assert(k < nprocs_per_node[j]) will fail.
+                 */
+                for (i = 0; i < num_aggr; i++) {
+                    int stripe_i = i % striping_factor;
+                    j = stripe_i % fh->num_NUMAs; /* select from node j */
+                    k = nprocs_per_node[j] / naggr_per_node[j];
+                    k *= selected[j];
+                    /* stride==1 seems no difference (k = selected[j];) */
+                    selected[j]++;
+                    assert(k < nprocs_per_node[j]);
+                    fh->hints->aggr_ranks[i] = ranks_per_node[j][k];
+                }
             }
+            else {
+                /* Using stride of 1 or more (within a node) does not seem to
+                 * have any performance difference. Below uses stride == 1.
+                 */
+                i = j = 0;
+                while (i < num_aggr) {
+                    if (selected[j] < nprocs_per_node[j])
+                        fh->hints->aggr_ranks[i++] =
+                                        ranks_per_node[j][selected[j]++];
+                    j = (j+1) % fh->num_NUMAs; /* round-robin */
+                }
+            }
+            GIOI_Free(selected);
         }
         GIOI_Free(naggr_per_node);
-        GIOI_Free(idx_per_node);
     }
 
     /* TODO: we can keep these two arrays in case for dynamic construction
