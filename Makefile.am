@@ -6,8 +6,13 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src utils
-DIST_SUBDIRS = src utils
+if BUILD_AS_SUBPROJECT
+   SUBDIRS = src
+   DIST_SUBDIRS = src
+else
+   SUBDIRS = src utils
+   DIST_SUBDIRS = src utils
+endif
 
 EXTRA_DIST = INSTALL.md \
              README.md \
@@ -83,8 +88,10 @@ distclean-local:
 .PHONY: ptest ptests tests
 
 dist-hook:
-	$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md
-	$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md
-	$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md
+	@if test "x${SUBDIRS}" = "xsrc" ; then \
+		$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md ; \
+		$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md ; \
+		$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md ; \
+	fi
 
 

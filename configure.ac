@@ -753,13 +753,14 @@ AC_SUBST(ABIVERSIONFLAGS)
 # Check if GIO is being built as a subproject
 AM_CONDITIONAL(BUILD_AS_SUBPROJECT, [test "x$GIO_SUB_BUILD" = xyes])
 
+if test "x$GIO_SUB_BUILD" != xyes ; then
+   util_files="utils/Makefile utils/gio-config utils/packaging/Makefile utils/packaging/gio.pc"
+fi
+
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
-                utils/Makefile \
-                utils/gio-config \
-                utils/packaging/Makefile \
-                utils/packaging/gio.pc \
+                $util_files \
 )
 
 AC_SUBST(enable_static)
