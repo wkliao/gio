@@ -20,7 +20,7 @@ void print_profiled(MPI_Comm comm)
 {
     int i, rank;
     double max_t[NTIMERS];
-    MPI_Count max_c[NTIMERS];
+    MPI_Offset max_c[NTIMERS];
 
     MPI_Comm_rank(comm, &rank);
 
@@ -31,10 +31,10 @@ void print_profiled(MPI_Comm comm)
     MPI_Reduce(gio_rd_time, max_t, NTIMERS, MPI_DOUBLE, MPI_MAX, 0, comm);
     for (i=0; i<NTIMERS; i++) gio_rd_time[i] = max_t[i];
 
-    MPI_Reduce(gio_wr_count, max_c, NTIMERS, MPI_COUNT, MPI_MAX, 0, comm);
+    MPI_Reduce(gio_wr_count, max_c, NTIMERS, MPI_OFFSET, MPI_MAX, 0, comm);
     for (i=0; i<NTIMERS; i++) gio_wr_count[i] = max_c[i];
 
-    MPI_Reduce(gio_rd_count, max_c, NTIMERS, MPI_COUNT, MPI_MAX, 0, comm);
+    MPI_Reduce(gio_rd_count, max_c, NTIMERS, MPI_OFFSET, MPI_MAX, 0, comm);
     for (i=0; i<NTIMERS; i++) gio_rd_count[i] = max_c[i];
 
     /* print 2-phase write timers */

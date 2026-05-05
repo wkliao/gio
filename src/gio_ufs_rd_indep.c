@@ -22,16 +22,16 @@
 #include "gioi.h"
 
 /*----< GIO_UFS_read_contig() >----------------------------------------------*/
-GIO_Count
+MPI_Offset
 GIO_UFS_read_contig(GIO_File    fh,
                     void       *buf,
-                    GIO_Count   r_size,
-                    GIO_Count   offset)
+                    MPI_Offset   r_size,
+                    MPI_Offset   offset)
 {
     char *p;
     ssize_t err = 0;
     size_t r_count;
-    GIO_Count bytes_xfered = 0;
+    MPI_Offset bytes_xfered = 0;
 
     if (r_size == 0) return GIO_NOERR;
 
@@ -73,14 +73,14 @@ err_out:
  * Note in GIO, the file view and buffer view are never used for more than
  * one round, which greatly simplifies the implementation of this subroutine.
  */
-GIO_Count
+MPI_Offset
 GIO_UFS_read_indep(GIO_File  fh,
                    void     *buf)
 {
     char *ptr, *cpy_ptr, *tmp_buf=NULL;
-    GIO_Count i, j, k, ntimes;
-    GIO_Count lock_off, file_off;
-    GIO_Count lock_len, len, total_len=0, tmp_buf_size, file_rem, buf_rem;
+    MPI_Offset i, j, k, ntimes;
+    MPI_Offset lock_off, file_off;
+    MPI_Offset lock_len, len, total_len=0, tmp_buf_size, file_rem, buf_rem;
 
 #if GIO_DEBUG_MODE == 1
     /* User I/O hints should have been checked already. */
@@ -147,7 +147,7 @@ GIO_UFS_read_indep(GIO_File  fh,
         k = (fh->bview.npairs <= 1) ? 1 : 0; /* whether to skip while loop k */
         j = 0;
         for (i=0; i<ntimes; i++) { /* perform read in ntimes rounds */
-            GIO_Count req_len, tmp_buf_rem;
+            MPI_Offset req_len, tmp_buf_rem;
 
             /* using tmp_buf to read from the file */
             tmp_buf_rem = tmp_buf_size;
@@ -208,8 +208,8 @@ GIO_UFS_read_indep(GIO_File  fh,
     }
     else {
         /* fview is noncontiguous and data sieving is not disabled */
-        GIO_Count disp, first_stripe, last_stripe;
-        GIO_Count lock_rem, cpy_len;
+        MPI_Offset disp, first_stripe, last_stripe;
+        MPI_Offset lock_rem, cpy_len;
 
         /* allocate read-copy buffer */
         tmp_buf_size = MIN(lock_len, fh->hints->striping_unit);
@@ -257,7 +257,7 @@ GIO_UFS_read_indep(GIO_File  fh,
         k = 0; /* index pointed to bview's  offset-length pairs */
         j = 0; /* index pointed to fview's offset-length pairs */
         for (i=0; i<ntimes; i++) { /* perform read in ntimes rounds */
-            GIO_Count req_len, tmp_buf_rem, gap;
+            MPI_Offset req_len, tmp_buf_rem, gap;
 
             /* adjust tmp_buf_size to achieve striping_unit aligned file
              * access
@@ -271,7 +271,7 @@ GIO_UFS_read_indep(GIO_File  fh,
                  * be copied to the user read buffer. This allows to skip a few
                  * rounds.
                  */
-                GIO_Count skip = disp / tmp_buf_size;
+                MPI_Offset skip = disp / tmp_buf_size;
                 i        += skip - 1;
                 disp     -= skip * tmp_buf_size;
                 lock_rem -= skip * tmp_buf_size;

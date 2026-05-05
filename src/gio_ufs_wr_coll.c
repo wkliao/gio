@@ -52,19 +52,19 @@
 static void
 fill_send_buffer(GIO_File         fh,
                  const void      *buf,
-                 GIO_Count        min_st_off,
-                 GIO_Count        fd_size,
-                 const GIO_Count *fd_end,       /* IN: [cb_nodes] */
-                 const GIO_Count *send_size,    /* IN: [nprocs] */
-                 GIO_Count       *sent_to_proc, /* IN/OUT: [nprocs] */
+                 MPI_Offset        min_st_off,
+                 MPI_Offset        fd_size,
+                 const MPI_Offset *fd_end,       /* IN: [cb_nodes] */
+                 const MPI_Offset *send_size,    /* IN: [nprocs] */
+                 MPI_Offset       *sent_to_proc, /* IN/OUT: [nprocs] */
                  char *const     *send_buf,     /* OUT: [nprocs] */
                  MPI_Request     *reqs)         /* OUT: [nprocs] */
 {
     int i, k, nprocs, myrank, aggr;
-    GIO_Count off;
-    GIO_Count buf_indx, buf_rem, size_in_buf, buf_incr, size;
-    GIO_Count len, rem_len, user_buf_idx;
-    GIO_Count j, *curr_to, *done_to, *send_buf_idx;
+    MPI_Offset off;
+    MPI_Offset buf_indx, buf_rem, size_in_buf, buf_incr, size;
+    MPI_Offset len, rem_len, user_buf_idx;
+    MPI_Offset j, *curr_to, *done_to, *send_buf_idx;
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -76,7 +76,7 @@ fill_send_buffer(GIO_File         fh,
      * user_buf_idx - current location in user buffer
      * send_buf_idx[nprocs] = current location in send_buf of each rank
      */
-    curr_to = GIOI_Malloc(sizeof(GIO_Count) * nprocs * 3);
+    curr_to = GIOI_Malloc(sizeof(MPI_Offset) * nprocs * 3);
     done_to = curr_to + nprocs;
     send_buf_idx = done_to + nprocs;
 
@@ -158,30 +158,30 @@ fill_send_buffer(GIO_File         fh,
 }
 
 /*----< W_Exchange_data() >--------------------------------------------------*/
-static GIO_Count
+static MPI_Offset
 W_Exchange_data(GIO_File         fh,
                 const void      *buf,
                 char            *write_buf,
-                const GIO_Count *recv_size,    /* IN: [nprocs] */
-                GIO_Count        rem_off,
-                GIO_Count        rem_size,
-                const GIO_Count *count,        /* IN: [nprocs] */
-                const GIO_Count *start_pos,    /* IN: [nprocs] */
-                const GIO_Count *partial_recv, /* IN: [nprocs] */
-                GIO_Count       *sent_to_proc, /* IN/OUT: [nprocs] */
-                GIO_Count        min_st_off,
-                GIO_Count        fd_size,
-                const GIO_Count *fd_end,       /* IN: [cb_nodes] */
+                const MPI_Offset *recv_size,    /* IN: [nprocs] */
+                MPI_Offset        rem_off,
+                MPI_Offset        rem_size,
+                const MPI_Offset *count,        /* IN: [nprocs] */
+                const MPI_Offset *start_pos,    /* IN: [nprocs] */
+                const MPI_Offset *partial_recv, /* IN: [nprocs] */
+                MPI_Offset       *sent_to_proc, /* IN/OUT: [nprocs] */
+                MPI_Offset        min_st_off,
+                MPI_Offset        fd_size,
+                const MPI_Offset *fd_end,       /* IN: [cb_nodes] */
                 GIO_Access      *others_req,   /* IN/OUT: [nprocs] */
-                GIO_Count       *buf_idx)      /* IN/OUT: [nprocs] */
+                MPI_Offset       *buf_idx)      /* IN/OUT: [nprocs] */
 {
     char **send_buf = NULL;
     int i, j, nprocs, myrank, err=GIO_NOERR;
     int nrecvs, nsends, num_rtypes, nreqs, hole;
     MPI_Request *reqs, *send_req;
     MPI_Datatype *recv_types, self_recv_type=MPI_DATATYPE_NULL;
-    GIO_Count *send_size, sum, *srt_len=NULL, *tmp_len;
-    GIO_Count *srt_off=NULL;
+    MPI_Offset *send_size, sum, *srt_len=NULL, *tmp_len;
+    MPI_Offset *srt_off=NULL;
 
 #if GIO_PROFILING_MODE == 1
     double curT = MPI_Wtime();
@@ -193,13 +193,13 @@ W_Exchange_data(GIO_File         fh,
     /* Exchange recv_size info so that each aggregator knows how much to send
      * to whom and how much memory to allocate.
      */
-    send_size = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
-    MPI_Alltoall(recv_size, 1, MPI_COUNT, send_size, 1, MPI_COUNT, fh->comm);
+    send_size = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
+    MPI_Alltoall(recv_size, 1, MPI_OFFSET, send_size, 1, MPI_OFFSET, fh->comm);
 
     /* construct derived datatypes for recv */
     recv_types = (MPI_Datatype*) GIOI_Malloc(sizeof(MPI_Datatype) * nprocs);
 
-    tmp_len = GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    tmp_len = GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
     j = 0;
     nsends = 0;
     nrecvs = 0;
@@ -217,7 +217,7 @@ W_Exchange_data(GIO_File         fh,
 
             if (partial_recv[i]) {
                 /* take care if the last off-len pair is a partial recv */
-                GIO_Count k = start_pos[i] + count[i] - 1;
+                MPI_Offset k = start_pos[i] + count[i] - 1;
                 tmp_len[i] = others_req[i].lens[k];
                 others_req[i].lens[k] = partial_recv[i];
             }
@@ -249,8 +249,8 @@ W_Exchange_data(GIO_File         fh,
 #if GIO_PROFILING_MODE == 1
         double timing = MPI_Wtime();
 #endif
-        srt_off = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * sum);
-        srt_len = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * sum);
+        srt_off = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * sum);
+        srt_len = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * sum);
 
 /* TODO: GIO_Heap_merge is expensive, borrow codes from ad_lustre_wrcoll.c to skip it when possible */
 
@@ -281,7 +281,7 @@ W_Exchange_data(GIO_File         fh,
         if (rem_off != srt_off[0])  /* hole at the front */
             hole = 1;
         else {  /* coalesce the sorted offset-length pairs */
-            GIO_Count k, new_len;
+            MPI_Offset k, new_len;
             for (k=1; k<sum; k++) {
                 if (srt_off[k] <= srt_off[0] + srt_len[0]) {
                     new_len = srt_off[k] + srt_len[k] - srt_off[0];
@@ -299,7 +299,7 @@ W_Exchange_data(GIO_File         fh,
     }
 
     if (nrecvs && hole) {
-        GIO_Count r_len;
+        MPI_Offset r_len;
         r_len = GIO_UFS_read_contig(fh, write_buf, rem_size, rem_off);
         if (r_len < 0) return r_len;
     }
@@ -327,7 +327,7 @@ W_Exchange_data(GIO_File         fh,
             } else if (fh->bview.npairs <= 1) {
                 /* sen/recv to/from self uses MPI_Unpack() */
 #ifdef HAVE_MPI_LARGE_COUNT
-                GIO_Count pos=0;
+                MPI_Offset pos=0;
                 MPI_Unpack_c((char*)buf + buf_idx[i], recv_size[i], &pos,
                              write_buf, 1, self_recv_type, MPI_COMM_SELF);
 #else
@@ -399,7 +399,7 @@ W_Exchange_data(GIO_File         fh,
 #endif
 
 #ifdef HAVE_MPI_LARGE_COUNT
-                GIO_Count pos=0;
+                MPI_Offset pos=0;
                 MPI_Unpack_c(ptr, recv_size[i], &pos, write_buf, 1,
                              self_recv_type, MPI_COMM_SELF);
 #else
@@ -417,7 +417,7 @@ W_Exchange_data(GIO_File         fh,
 #endif
 
 #ifdef HAVE_MPI_LARGE_COUNT
-        GIO_Count pos=0;
+        MPI_Offset pos=0;
         MPI_Unpack_c(send_buf[myrank], recv_size[myrank], &pos, write_buf,
                      1, self_recv_type, MPI_COMM_SELF);
 #else
@@ -477,21 +477,21 @@ W_Exchange_data(GIO_File         fh,
  * 8 processes per I/O aggregator, requiring at least another 8 MiB of temp
  * space may be unacceptable.
  */
-static GIO_Count
+static MPI_Offset
 Exch_and_write(GIO_File         fh,
                const void      *buf,
-               GIO_Count        min_st_off,
-               GIO_Count        fd_size,
-               const GIO_Count *fd_end,     /* IN: [cb_nodes] */
+               MPI_Offset        min_st_off,
+               MPI_Offset        fd_size,
+               const MPI_Offset *fd_end,     /* IN: [cb_nodes] */
                GIO_Access      *others_req, /* IN/OUT: [nprocs] */
-               GIO_Count       *buf_idx)    /* IN/OUT: [nprocs] */
+               MPI_Offset       *buf_idx)    /* IN/OUT: [nprocs] */
 {
     char *write_buf = NULL;
     int i, m, ntimes, max_ntimes, nprocs, myrank, do_write, cb_buffer_size;
-    GIO_Count st_loc, end_loc, round_end, rem_off;
-    GIO_Count rem_size, done, w_len, total_w_len=0;
-    GIO_Count j, *curr_offlen_ptr, *count, *recv_size;
-    GIO_Count *partial_recv, *sent_to_proc, *start_pos;
+    MPI_Offset st_loc, end_loc, round_end, rem_off;
+    MPI_Offset rem_size, done, w_len, total_w_len=0;
+    MPI_Offset j, *curr_offlen_ptr, *count, *recv_size;
+    MPI_Offset *partial_recv, *sent_to_proc, *start_pos;
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -537,34 +537,34 @@ Exch_and_write(GIO_File         fh,
     /* curr_offlen_ptr[] is the current off-len pair in others_req[] being
      * processed for each process. It must be initialized to 0s.
      */
-    curr_offlen_ptr = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
+    curr_offlen_ptr = (MPI_Offset*) GIOI_Calloc(nprocs, sizeof(MPI_Offset));
 
     /* start_pos[] stores the starting value of curr_offlen_ptr[] in a round.
      * It must be initialized to 0s.
      */
-    start_pos = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
+    start_pos = (MPI_Offset*) GIOI_Calloc(nprocs, sizeof(MPI_Offset));
 
     /* If only a portion of the last offset-length pair is received from an
      * aggregator in a round, then partial_recv[] stores that receive amount.
      * It must be initialized to 0s.
      */
-    partial_recv = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
+    partial_recv = (MPI_Offset*) GIOI_Calloc(nprocs, sizeof(MPI_Offset));
 
     /* sent_to_proc[] stores the amount of data so far this aggregator has sent
      * to each process. It will be only used and updated in fill_send_buffer().
      * It must be initialized to 0s.
      */
-    sent_to_proc = (GIO_Count*) GIOI_Calloc(nprocs, sizeof(GIO_Count));
+    sent_to_proc = (MPI_Offset*) GIOI_Calloc(nprocs, sizeof(MPI_Offset));
 
     /* count[] is the number of offset-length pairs of each process that will
      * be processes during a round. It must be initialized to 0s.
      */
-    count = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    count = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
 
     /* Total size of data this rank will receive from each aggregator in a
      * round.
      */
-    recv_size = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    recv_size = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
 
     done = 0;
     rem_off = st_loc;
@@ -601,8 +601,8 @@ Exch_and_write(GIO_File         fh,
 
             start_pos[i] = curr_offlen_ptr[i];
             for (j=curr_offlen_ptr[i]; j<others_req[i].count; j++) {
-                GIO_Count req_off;
-                GIO_Count req_len;
+                MPI_Offset req_off;
+                MPI_Offset req_len;
 
                 /* req_off is the file offset for offset-length pair j minus
                  * what has been satisfied in previous round
@@ -716,13 +716,13 @@ err_out:
 static int
 offset_compare(const void *a, const void *b)
 {
-    if (*(GIO_Count*)a > *(GIO_Count*)b) return (1);
-    if (*(GIO_Count*)a < *(GIO_Count*)b) return (-1);
+    if (*(MPI_Offset*)a > *(MPI_Offset*)b) return (1);
+    if (*(MPI_Offset*)a < *(MPI_Offset*)b) return (-1);
     return (0);
 }
 
 /*----< GIO_UFS_write_coll() >---------------------------------------------*/
-GIO_Count
+MPI_Offset
 GIO_UFS_write_coll(GIO_File  fh,
                      const void *buf)
 {
@@ -745,10 +745,10 @@ GIO_UFS_write_coll(GIO_File  fh,
     GIO_Access *others_req;
 
     int i, nprocs, rank, interleave_count=0;
-    GIO_Count *buf_idx = NULL;
-    GIO_Count *count_per_aggr, my_req_naggr;
-    GIO_Count *fd_end=NULL, min_st_off=0, max_end_off=LLONG_MAX;
-    GIO_Count fd_size, w_len=0;
+    MPI_Offset *buf_idx = NULL;
+    MPI_Offset *count_per_aggr, my_req_naggr;
+    MPI_Offset *fd_end=NULL, min_st_off=0, max_end_off=LLONG_MAX;
+    MPI_Offset fd_size, w_len=0;
 
 #if GIO_PROFILING_MODE == 1
 double curT = MPI_Wtime();
@@ -773,7 +773,7 @@ double curT = MPI_Wtime();
 
     /* only check for interleaving if hint cb_write isn't disabled */
     if (fh->hints->cb_write != GIO_HINT_DISABLE) {
-        GIO_Count *st_end_all;
+        MPI_Offset *st_end_all;
 
         /* Calculate the aggregate access region of this rank's request, which
          * represents a file range from the very first byte offset accessed by
@@ -785,7 +785,7 @@ double curT = MPI_Wtime();
          * processes in order to tell whether there is an interleaving access
          * among all.
          */
-        st_end_all = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * 2 * nprocs);
+        st_end_all = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * 2 * nprocs);
         if (fh->fview.size == 0) /* -1 to indicate zero-sized request */
             st_end_all[2*rank] = st_end_all[2*rank+1] = -1;
         else {
@@ -803,7 +803,7 @@ double curT = MPI_Wtime();
          *   min_st_off  - starting file offset of the aggregate access region
          *   max_end_off - end file offset of the aggregate access region
          */
-        qsort(st_end_all, nprocs, sizeof(GIO_Count)*2, offset_compare);
+        qsort(st_end_all, nprocs, sizeof(MPI_Offset)*2, offset_compare);
 
         for (i=0; i<2*nprocs; i+=2) { /* find the 1st non-zero sized */
             if (st_end_all[i] >= 0) {
@@ -890,7 +890,7 @@ double curT = MPI_Wtime();
      *      used to perform file read/write. Note this is only relevant when
      *      the user buffer is contiguous.
      */
-    count_per_aggr = GIOI_Calloc(nprocs, sizeof(GIO_Count));
+    count_per_aggr = GIOI_Calloc(nprocs, sizeof(MPI_Offset));
 
     GIO_Calc_my_req(fh, min_st_off, fd_end, fd_size, &my_req_naggr,
                     count_per_aggr, &my_req, &buf_idx);

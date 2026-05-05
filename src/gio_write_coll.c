@@ -11,18 +11,18 @@
 
 /*----< GIO_write_all() >----------------------------------------------------*/
 /* This is a collective call. */
-GIO_Count
+MPI_Offset
 GIO_write_all(GIO_File         fh,
               const void      *buf,
-              GIO_Count        file_npairs,
-              const GIO_Count *file_offs,
-              const GIO_Count *file_lens,
-              GIO_Count        buf_npairs,
-              const GIO_Count *buf_offs,
-              const GIO_Count *buf_lens)
+              MPI_Offset        file_npairs,
+              const MPI_Offset *file_offs,
+              const MPI_Offset *file_lens,
+              MPI_Offset        buf_npairs,
+              const MPI_Offset *buf_offs,
+              const MPI_Offset *buf_lens)
 {
     int err = GIO_NOERR;
-    GIO_Count w_len;
+    MPI_Offset w_len;
 
     err = SANITY_CHECK(fh, file_npairs, file_offs, file_lens,
                            buf_npairs,  buf_offs,  buf_lens);

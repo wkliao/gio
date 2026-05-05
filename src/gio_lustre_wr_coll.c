@@ -18,21 +18,21 @@
 static int use_alltoallw;
 
 typedef struct {
-    GIO_Count    num; /* number of elements in the above off-len list */
+    MPI_Offset    num; /* number of elements in the above off-len list */
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count *off; /* list of write offsets by this rank in round m */
-    GIO_Count   *len; /* list of write lengths by this rank in round m */
+    MPI_Offset *off; /* list of write offsets by this rank in round m */
+    MPI_Offset   *len; /* list of write lengths by this rank in round m */
 #else
-    GIO_Count  *off; /* list of write offsets by this rank in round m */
+    MPI_Offset  *off; /* list of write offsets by this rank in round m */
     int         *len; /* list of write lengths by this rank in round m */
 #endif
 } off_len_list;
 
 typedef struct {
-    GIO_Count   count; /* number displacement-length pairs */
+    MPI_Offset   count; /* number displacement-length pairs */
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count  *disp;  /* [count]: displacement */
-    GIO_Count  *len;   /* [count]: size in bytes */
+    MPI_Offset  *disp;  /* [count]: displacement */
+    MPI_Offset  *len;   /* [count]: size in bytes */
 #else
     MPI_Aint   *disp;  /* [count]: displacement */
     int        *len;   /* [count]: size in bytes */
@@ -42,16 +42,16 @@ typedef struct {
 /*----< LUSTRE_Calc_aggregator() >-------------------------------------------*/
 static int
 LUSTRE_Calc_aggregator(GIO_File  fh,
-                       GIO_Count off,
+                       MPI_Offset off,
 #ifdef HAVE_MPI_LARGE_COUNT
-                       GIO_Count *len
+                       MPI_Offset *len
 #else
                        int        *len
 #endif
 )
 {
-    GIO_Count avail_bytes;
-    GIO_Count stripe_id;
+    MPI_Offset avail_bytes;
+    MPI_Offset stripe_id;
 
     stripe_id = off / fh->hints->striping_unit;
 
@@ -80,15 +80,15 @@ LUSTRE_Fill_send_buffer(GIO_File        fh,
                         const void       *buf,
                         char            **send_buf,
                         size_t            send_total_size,
-                        const GIO_Count  *send_size,
+                        const MPI_Offset  *send_size,
                         char            **self_buf,
                         disp_len_list    *send_list)
 {
     char *user_buf_ptr=NULL, *send_buf_ptr=NULL, *same_buf_ptr=NULL;
     int aggr, first_aggr, isUserBuf;
-    GIO_Count send_size_rem=0, size, copy_size=0;
-    GIO_Count len, rem_len, user_buf_idx;
-    GIO_Count rem_off;
+    MPI_Offset send_size_rem=0, size, copy_size=0;
+    MPI_Offset len, rem_len, user_buf_idx;
+    MPI_Offset rem_off;
 
 #if GIO_DEBUG_MODE == 1
     char *orig_ptr;
@@ -187,7 +187,7 @@ LUSTRE_Fill_send_buffer(GIO_File        fh,
             size = len;
 
             while (size > 0) {
-                GIO_Count size_in_buf = MIN(size, fh->bview.rem);
+                MPI_Offset size_in_buf = MIN(size, fh->bview.rem);
                 copy_size     += size_in_buf;
                 user_buf_idx  += size_in_buf;
                 send_size_rem -= size_in_buf;
@@ -308,8 +308,8 @@ LUSTRE_Fill_send_buffer(GIO_File        fh,
 #define MEMCPY_UNPACK(x, inbuf, start, count, outbuf) {          \
     int _k;                                                      \
     char *_ptr = (inbuf);                                        \
-    GIO_Count  *mem_ptrs = others_req[x].mem_ptrs + (start);     \
-    GIO_Count *mem_lens = others_req[x].lens     + (start);     \
+    MPI_Offset  *mem_ptrs = others_req[x].mem_ptrs + (start);     \
+    MPI_Offset *mem_lens = others_req[x].lens     + (start);     \
     for (_k=0; _k<count; _k++) {                                 \
         memcpy((outbuf) + mem_ptrs[_k], _ptr, mem_lens[_k]);     \
         _ptr += mem_lens[_k];                                    \
@@ -338,14 +338,14 @@ Exchange_data_send(
                                          * self */
           char          **send_buf_ptr, /* OUT: [cb_nodes] point to internal
                                          * send buffer */
-    const GIO_Count      *send_size,    /* [cb_nodes] send_size[i] is amount of
+    const MPI_Offset      *send_size,    /* [cb_nodes] send_size[i] is amount of
                                          * this rank sent to aggregator i */
-          GIO_Count       self_count,   /* No. offset-length pairs sent to self
+          MPI_Offset       self_count,   /* No. offset-length pairs sent to self
                                          * rank */
-          GIO_Count       start_pos,    /* others_req[myrank].curr */
+          MPI_Offset       start_pos,    /* others_req[myrank].curr */
     const GIO_Access   *others_req,   /* [nprocs] only used when send to self,
                                          * others_req[myrank] */
-    const GIO_Count     *buf_idx,      /* [cb_nodes] indices to user buffer
+    const MPI_Offset     *buf_idx,      /* [cb_nodes] indices to user buffer
                                          * for sending this rank's write data
                                          * to aggregator i */
           disp_len_list  *send_list)    /* OUT: displacement-length pairs of
@@ -418,18 +418,18 @@ Exchange_data_send(
  */
 static void
 heap_merge(const GIO_Access *others_req,
-           const GIO_Count    *count,
-           GIO_Count          *srt_off,
-           GIO_Count          *srt_len,
-           const GIO_Count    *start_pos,
+           const MPI_Offset    *count,
+           MPI_Offset          *srt_off,
+           MPI_Offset          *srt_len,
+           const MPI_Offset    *start_pos,
            int                 nprocs,
            int                 nprocs_recv,
-           GIO_Count          *total_elements)
+           MPI_Offset          *total_elements)
 {
     typedef struct {
-        GIO_Count *off_list;
-        GIO_Count *len_list;
-        GIO_Count nelem;
+        MPI_Offset *off_list;
+        MPI_Offset *len_list;
+        MPI_Offset nelem;
     } heap_struct;
 
     heap_struct *a, tmp;
@@ -533,21 +533,21 @@ Exchange_data_recv(
                                         * to file */
           char          **recv_buf,    /* OUT: [nbufs] internal buffer used to
                                         * receive from other processes */
-    const GIO_Count      *recv_size,   /* [nprocs] recv_size[i] is amount of
+    const MPI_Offset      *recv_size,   /* [nprocs] recv_size[i] is amount of
                                         * this aggregator recv from rank i */
-          GIO_Count      range_off,   /* starting file offset of this
+          MPI_Offset      range_off,   /* starting file offset of this
                                         * aggregator's write region */
-          GIO_Count       range_size,  /* amount of this aggregator's write
+          MPI_Offset       range_size,  /* amount of this aggregator's write
                                         * region */
-    const GIO_Count      *recv_count,  /* [nprocs] recv_count[i] is the number
+    const MPI_Offset      *recv_count,  /* [nprocs] recv_count[i] is the number
                                         * of offset-length pairs received from
                                         * rank i */
-    const GIO_Count      *start_pos,   /* [nprocs] start_pos[i] starting value
+    const MPI_Offset      *start_pos,   /* [nprocs] start_pos[i] starting value
                                         * of others_req[i].curr */
     const GIO_Access   *others_req,  /* [nprocs] others_req[i] is rank i's
                                         * write requests fall into this
                                         * aggregator's file domain */
-    const GIO_Count     *buf_idx,      /* [cb_nodes] indices to user buffer
+    const MPI_Offset     *buf_idx,      /* [cb_nodes] indices to user buffer
                                         * offsets for sending this rank's
                                         * write data to aggregator i */
           off_len_list   *srt_off_len, /* OUT: list of write offset-length
@@ -558,7 +558,7 @@ Exchange_data_recv(
     char *buf_ptr, *contig_buf;
     size_t alloc_sz;
     int i, j, nprocs, myrank, nprocs_recv, hole, build_srt_off_len;
-    GIO_Count sum_recv;
+    MPI_Offset sum_recv;
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -585,7 +585,7 @@ Exchange_data_recv(
 
     if (nprocs_recv == 0) return GIO_NOERR;
 
-// GIO_Count numx = srt_off_len->num; printf("nprocs_recv=%d GIO_DS_WR_NAGGRS_LB=%d srt_off_len->num=%lld GIO_DS_WR_NPAIRS_LB=%d\n",nprocs_recv,GIO_DS_WR_NAGGRS_LB,srt_off_len->num,GIO_DS_WR_NPAIRS_LB);
+// MPI_Offset numx = srt_off_len->num; printf("nprocs_recv=%d GIO_DS_WR_NAGGRS_LB=%d srt_off_len->num=%lld GIO_DS_WR_NPAIRS_LB=%d\n",nprocs_recv,GIO_DS_WR_NAGGRS_LB,srt_off_len->num,GIO_DS_WR_NPAIRS_LB);
 
     /* determine whether checking holes is necessary */
     if (srt_off_len->num == 0) {
@@ -595,9 +595,9 @@ Exchange_data_recv(
     } else if (srt_off_len->num == 1) {
         build_srt_off_len = 0;
         hole = 0;
-        alloc_sz = sizeof(GIO_Count) + sizeof(GIO_Count);
-        srt_off_len->off = (GIO_Count*) GIOI_Malloc(alloc_sz);
-        srt_off_len->len = (GIO_Count*) (srt_off_len->off + 1);
+        alloc_sz = sizeof(MPI_Offset) + sizeof(MPI_Offset);
+        srt_off_len->off = (MPI_Offset*) GIOI_Malloc(alloc_sz);
+        srt_off_len->len = (MPI_Offset*) (srt_off_len->off + 1);
         srt_off_len->off[0] = others_req[j].offsets[start_pos[j]];
         srt_off_len->len[0] = others_req[j].lens[start_pos[j]];
     } else if (fh->hints->ds_write == GIO_HINT_ENABLE) {
@@ -649,9 +649,9 @@ Exchange_data_recv(
         /* merge all the offset-length pairs from others_req[] (already sorted
          * individually) into a single list of offset-length pairs.
          */
-        alloc_sz = sizeof(GIO_Count) + sizeof(GIO_Count);
-        srt_off_len->off = (GIO_Count*) GIOI_Malloc(alloc_sz * srt_off_len->num);
-        srt_off_len->len = (GIO_Count*) (srt_off_len->off + srt_off_len->num);
+        alloc_sz = sizeof(MPI_Offset) + sizeof(MPI_Offset);
+        srt_off_len->off = (MPI_Offset*) GIOI_Malloc(alloc_sz * srt_off_len->num);
+        srt_off_len->len = (MPI_Offset*) (srt_off_len->off + srt_off_len->num);
 
 #if GIO_PROFILING_MODE == 1
         double curT = MPI_Wtime();
@@ -677,7 +677,7 @@ Exchange_data_recv(
         if (fh->skip_read)
             memset(write_buf, 0, range_size);
         else {
-            GIO_Count r_len;
+            MPI_Offset r_len;
             r_len = GIO_UFS_read_contig(fh, write_buf, range_size, range_off);
             if (r_len < 0) return (int)r_len;
         }
@@ -687,9 +687,9 @@ Exchange_data_recv(
          */
         srt_off_len->num = 1;
         if (srt_off_len->off == NULL) { /* if has not been malloc-ed yet */
-            alloc_sz = sizeof(GIO_Count) + sizeof(GIO_Count);
-            srt_off_len->off = (GIO_Count*) GIOI_Malloc(alloc_sz);
-            srt_off_len->len = (GIO_Count*) (srt_off_len->off + 1);
+            alloc_sz = sizeof(MPI_Offset) + sizeof(MPI_Offset);
+            srt_off_len->off = (MPI_Offset*) GIOI_Malloc(alloc_sz);
+            srt_off_len->len = (MPI_Offset*) (srt_off_len->off + 1);
         }
         srt_off_len->off[0] = range_off;
         srt_off_len->len[0] = range_size;
@@ -762,13 +762,13 @@ static void
 LUSTRE_Calc_my_req(GIO_File     fh,
                    int            buf_is_contig,
                    GIO_Access **my_req_ptr,
-                   GIO_Count   **buf_idx)
+                   MPI_Offset   **buf_idx)
 {
     int aggr, *aggr_ranks, cb_nodes;
     size_t nelems, alloc_sz;
-    GIO_Count i, l;
-    GIO_Count rem_len, avail_len, *avail_lens, curr_idx;
-    GIO_Count off;
+    MPI_Offset i, l;
+    MPI_Offset rem_len, avail_len, *avail_lens, curr_idx;
+    MPI_Offset off;
     GIO_Access *my_req;
 
     cb_nodes = fh->hints->cb_nodes;
@@ -792,9 +792,9 @@ LUSTRE_Calc_my_req(GIO_File     fh,
     /* First pass is just to calculate how much space is needed to allocate
      * my_req.
      */
-    alloc_sz = sizeof(int) + sizeof(GIO_Count);
+    alloc_sz = sizeof(int) + sizeof(MPI_Offset);
     aggr_ranks = (int*) GIOI_Malloc(alloc_sz * fh->fview.npairs);
-    avail_lens = (GIO_Count*) (aggr_ranks + fh->fview.npairs);
+    avail_lens = (MPI_Offset*) (aggr_ranks + fh->fview.npairs);
 
     /* Note that MPI standard (MPI 3.1 Chapter 13.1.1 and MPI 4.0 Chapter
      * 14.1.1) requires that the typemap displacements of etype and
@@ -860,15 +860,15 @@ Alternative: especially for when fh->fview.npairs is large
      * This allows sends to be done without extra buffer.
      */
     if (buf_idx != NULL && buf_is_contig) {
-        buf_idx[0] = (GIO_Count *) GIOI_Malloc(sizeof(GIO_Count) * nelems);
+        buf_idx[0] = (MPI_Offset *) GIOI_Malloc(sizeof(MPI_Offset) * nelems);
         for (i = 1; i < cb_nodes; i++)
             buf_idx[i] = buf_idx[i - 1] + my_req[i - 1].count;
     }
 
     /* allocate space for my_req and its members offsets and lens */
 #ifdef HAVE_MPI_LARGE_COUNT
-    alloc_sz = sizeof(GIO_Count) * 2;
-    my_req[0].offsets = (GIO_Count*) GIOI_Malloc(alloc_sz * nelems);
+    alloc_sz = sizeof(MPI_Offset) * 2;
+    my_req[0].offsets = (MPI_Offset*) GIOI_Malloc(alloc_sz * nelems);
     my_req[0].lens    = my_req[0].offsets + my_req[0].count;
     for (i=1; i<cb_nodes; i++) {
         my_req[i].offsets = my_req[i-1].offsets + my_req[i-1].count * 2;
@@ -877,14 +877,14 @@ Alternative: especially for when fh->fview.npairs is large
     }
     my_req[cb_nodes-1].count = 0;
 #else
-    alloc_sz = sizeof(GIO_Count) + sizeof(int);
-    my_req[0].offsets = (GIO_Count*) GIOI_Malloc(alloc_sz * nelems);
+    alloc_sz = sizeof(MPI_Offset) + sizeof(int);
+    my_req[0].offsets = (MPI_Offset*) GIOI_Malloc(alloc_sz * nelems);
     my_req[0].lens    = (int*) (my_req[0].offsets + my_req[0].count);
 
     char *ptr = (char*) my_req[0].offsets + alloc_sz * my_req[0].count;
     for (i=1; i<cb_nodes; i++) {
-        my_req[i].offsets = (GIO_Count*)ptr;
-        ptr += sizeof(GIO_Count) * my_req[i].count;
+        my_req[i].offsets = (MPI_Offset*)ptr;
+        ptr += sizeof(MPI_Offset) * my_req[i].count;
         my_req[i].lens = (int*)ptr;
         ptr += sizeof(int) * my_req[i].count;
         my_req[i].count = 0; /* reset, will be incremented where needed later */
@@ -959,7 +959,7 @@ LUSTRE_Calc_others_req(GIO_File           fh,
                        GIO_Access       **others_req_ptr)
 {
     int i, myrank, nprocs, do_alltoallv, nreqs;
-    GIO_Count *count_my_req_per_proc, *count_others_req_per_proc;
+    MPI_Offset *count_my_req_per_proc, *count_others_req_per_proc;
     GIO_Access *others_req;
     size_t npairs, alloc_sz, pair_sz;
     MPI_Request *reqs;
@@ -980,7 +980,7 @@ LUSTRE_Calc_others_req(GIO_File           fh,
      * The below MPI_Alltoall() is actually an all-to-many, i,e, all ranks
      * send to aggregators only.
      */
-    count_my_req_per_proc = (GIO_Count *) GIOI_Calloc(nprocs * 2, sizeof(GIO_Count));
+    count_my_req_per_proc = (MPI_Offset *) GIOI_Calloc(nprocs * 2, sizeof(MPI_Offset));
     count_others_req_per_proc = count_my_req_per_proc + nprocs;
     for (i=0; i<fh->hints->cb_nodes; i++)
         count_my_req_per_proc[fh->hints->aggr_ranks[i]] = my_req[i].count;
@@ -990,11 +990,11 @@ LUSTRE_Calc_others_req(GIO_File           fh,
     nreqs = 0;
     if (fh->is_agg) {
         for (i=0; i<nprocs; i++)
-            MPI_Irecv(count_others_req_per_proc+i, 1, MPI_COUNT, i, 0, fh->comm, &reqs[nreqs++]);
+            MPI_Irecv(count_others_req_per_proc+i, 1, MPI_OFFSET, i, 0, fh->comm, &reqs[nreqs++]);
     }
     for (i=0; i<fh->hints->cb_nodes; i++) {
         int dest = fh->hints->aggr_ranks[i];
-        MPI_Issend(&my_req[i].count, 1, MPI_COUNT, dest, 0, fh->comm, &reqs[nreqs++]);
+        MPI_Issend(&my_req[i].count, 1, MPI_OFFSET, dest, 0, fh->comm, &reqs[nreqs++]);
     }
     if (nreqs) {
 #ifdef HAVE_MPI_STATUSES_IGNORE
@@ -1008,8 +1008,8 @@ LUSTRE_Calc_others_req(GIO_File           fh,
     }
     GIOI_Free(reqs);
 #else
-    MPI_Alltoall(count_my_req_per_proc, 1, MPI_COUNT,
-                 count_others_req_per_proc, 1, MPI_COUNT, fh->comm);
+    MPI_Alltoall(count_my_req_per_proc, 1, MPI_OFFSET,
+                 count_others_req_per_proc, 1, MPI_OFFSET, fh->comm);
 #endif
 
     /* calculate total number of offset-length pairs to be handled by this
@@ -1029,28 +1029,28 @@ LUSTRE_Calc_others_req(GIO_File           fh,
      * for others_req[].
      */
 #ifdef HAVE_MPI_LARGE_COUNT
-    pair_sz = sizeof(GIO_Count) * 2;
-    alloc_sz = pair_sz + sizeof(GIO_Count);
-    others_req[0].offsets  = (GIO_Count*) GIOI_Malloc(alloc_sz * npairs);
+    pair_sz = sizeof(MPI_Offset) * 2;
+    alloc_sz = pair_sz + sizeof(MPI_Offset);
+    others_req[0].offsets  = (MPI_Offset*) GIOI_Malloc(alloc_sz * npairs);
     others_req[0].lens     = others_req[0].offsets + others_req[0].count;
-    others_req[0].mem_ptrs = (GIO_Count*) (others_req[0].offsets + npairs * 2);
+    others_req[0].mem_ptrs = (MPI_Offset*) (others_req[0].offsets + npairs * 2);
     for (i=1; i<nprocs; i++) {
         others_req[i].offsets  = others_req[i-1].offsets + others_req[i-1].count * 2;
         others_req[i].lens     = others_req[i].offsets + others_req[i].count;
         others_req[i].mem_ptrs = others_req[i-1].mem_ptrs + others_req[i-1].count;
     }
 #else
-    pair_sz = sizeof(GIO_Count) + sizeof(int);
+    pair_sz = sizeof(MPI_Offset) + sizeof(int);
     alloc_sz = pair_sz + sizeof(MPI_Aint);
-    others_req[0].offsets  = (GIO_Count*) GIOI_Malloc(alloc_sz * npairs);
+    others_req[0].offsets  = (MPI_Offset*) GIOI_Malloc(alloc_sz * npairs);
     others_req[0].lens     = (int*) (others_req[0].offsets + others_req[0].count);
     char *ptr = (char*) others_req[0].offsets + pair_sz * npairs;
     others_req[0].mem_ptrs = (MPI_Aint*)ptr;
 
     ptr = (char*) others_req[0].offsets + pair_sz * others_req[0].count;
     for (i=1; i<nprocs; i++) {
-        others_req[i].offsets = (GIO_Count*)ptr;
-        ptr += sizeof(GIO_Count) * others_req[i].count;
+        others_req[i].offsets = (MPI_Offset*)ptr;
+        ptr += sizeof(MPI_Offset) * others_req[i].count;
         others_req[i].lens = (int*)ptr;
         ptr += sizeof(int) * others_req[i].count;
         others_req[i].mem_ptrs = others_req[i-1].mem_ptrs + others_req[i-1].count;
@@ -1077,12 +1077,12 @@ LUSTRE_Calc_others_req(GIO_File           fh,
 #endif
 
     if (do_alltoallv) {
-        GIO_Count *r_off_buf=NULL, *s_off_buf=NULL;
+        MPI_Offset *r_off_buf=NULL, *s_off_buf=NULL;
 #ifdef HAVE_MPI_LARGE_COUNT
-        GIO_Count *sendCounts, *recvCounts;
+        MPI_Offset *sendCounts, *recvCounts;
         MPI_Aint *sdispls, *rdispls;
-        alloc_sz   = sizeof(GIO_Count) * 2 + sizeof(MPI_Aint) * 2;
-        sendCounts = (GIO_Count*) GIOI_Calloc(nprocs, alloc_sz);
+        alloc_sz   = sizeof(MPI_Offset) * 2 + sizeof(MPI_Aint) * 2;
+        sendCounts = (MPI_Offset*) GIOI_Calloc(nprocs, alloc_sz);
         recvCounts = sendCounts + nprocs;
         sdispls    = (MPI_Aint*) (recvCounts + nprocs);
         rdispls    = sdispls + nprocs;
@@ -1223,10 +1223,10 @@ comm_phase_alltoallw(GIO_File     fh,
 
     /* calculate send/recv derived types metadata */
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count *sendCounts, *recvCounts;
+    MPI_Offset *sendCounts, *recvCounts;
     MPI_Aint *sdispls, *rdispls;
-    alloc_sz = sizeof(GIO_Count) + sizeof(MPI_Aint);
-    sendCounts = (GIO_Count*) GIOI_Calloc(nprocs * 2, alloc_sz);
+    alloc_sz = sizeof(MPI_Offset) + sizeof(MPI_Aint);
+    sendCounts = (MPI_Offset*) GIOI_Calloc(nprocs * 2, alloc_sz);
     sdispls = (MPI_Aint*) (sendCounts + (nprocs * 2));
 #else
     int *sendCounts, *recvCounts, *sdispls, *rdispls;
@@ -1349,7 +1349,7 @@ commit_comm_phase(GIO_File     fh,
 #if GIO_PROFILING_MODE == 1
     /* recv buffer type profiling */
     int nrecvs=0;
-    GIO_Count max_r_amnt=0, max_r_count=0;
+    MPI_Offset max_r_amnt=0, max_r_count=0;
 #endif
 
     if (fh->is_agg && recv_list != NULL) {
@@ -1358,7 +1358,7 @@ commit_comm_phase(GIO_File     fh,
             if (recv_list[i].count == 0 || i == rank) continue;
 
 #if GIO_PROFILING_MODE == 1
-            GIO_Count r_amnt=0;
+            MPI_Offset r_amnt=0;
             for (j=0; j<recv_list[i].count; j++)
                 r_amnt += recv_list[i].len[j];
             max_r_amnt = MAX(max_r_amnt, r_amnt);
@@ -1393,7 +1393,7 @@ commit_comm_phase(GIO_File     fh,
 #if GIO_PROFILING_MODE == 1
     /* send buffer type profiling */
     int nsends=0;
-    GIO_Count max_s_amnt=0, max_s_count=0;
+    MPI_Offset max_s_amnt=0, max_s_count=0;
 #endif
 
     for (i = 0; i < fh->hints->cb_nodes; i++) {
@@ -1401,7 +1401,7 @@ commit_comm_phase(GIO_File     fh,
         if (send_list[i].count == 0 || i == fh->my_cb_nodes_index) continue;
 
 #if GIO_PROFILING_MODE == 1
-        GIO_Count s_amnt=0;
+        MPI_Offset s_amnt=0;
         for (j=0; j<send_list[i].count; j++)
             s_amnt += send_list[i].len[j];
         max_s_amnt = MAX(max_s_amnt, s_amnt);
@@ -1475,26 +1475,26 @@ commit_comm_phase(GIO_File     fh,
  * for Collective I/O Based on Underlying Parallel File System Locking
  * Protocols", in The Supercomputing Conference, 2008.
  */
-static GIO_Count
+static MPI_Offset
 LUSTRE_Exch_and_write(GIO_File     fh,
                       const void    *buf,
                       GIO_Access  *others_req,
                       GIO_Access  *my_req,
-                      GIO_Count     min_st_off,
-                      GIO_Count     max_end_off,
-                      GIO_Count   **buf_idx)
+                      MPI_Offset     min_st_off,
+                      MPI_Offset     max_end_off,
+                      MPI_Offset   **buf_idx)
 {
     char **write_buf = NULL, **recv_buf = NULL, **send_buf = NULL;
     size_t alloc_sz;
     int nprocs, myrank, nbufs, ibuf, batch_idx=0, cb_nodes, striping_unit;
-    GIO_Count i, j, m, ntimes;
-    GIO_Count **recv_size=NULL, **recv_count=NULL;
-    GIO_Count **recv_start_pos=NULL, *send_size;
-    GIO_Count end_loc, req_off, iter_end_off, *off_list, step_size;
-    GIO_Count *this_buf_idx=NULL;
+    MPI_Offset i, j, m, ntimes;
+    MPI_Offset **recv_size=NULL, **recv_count=NULL;
+    MPI_Offset **recv_start_pos=NULL, *send_size;
+    MPI_Offset end_loc, req_off, iter_end_off, *off_list, step_size;
+    MPI_Offset *this_buf_idx=NULL;
     off_len_list *srt_off_len = NULL;
     disp_len_list *send_list = NULL, *recv_list = NULL;
-    GIO_Count w_len, total_w_len=0;
+    MPI_Offset w_len, total_w_len=0;
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -1514,10 +1514,10 @@ LUSTRE_Exch_and_write(GIO_File     fh,
      * Note the number of write phases = ntimes / nbufs, as writes (and
      * communication) are accumulated for nbufs rounds before flushed.
      */
-    step_size = (GIO_Count)cb_nodes * striping_unit;
+    step_size = (MPI_Offset)cb_nodes * striping_unit;
 
     /* align min_st_off downward to the nearest file stripe boundary */
-    min_st_off -= min_st_off % (GIO_Count) striping_unit;
+    min_st_off -= min_st_off % (MPI_Offset) striping_unit;
 
     /* ntimes is the number of rounds of two-phase I/O */
     ntimes = (max_end_off - min_st_off + 1) / step_size;
@@ -1552,7 +1552,7 @@ LUSTRE_Exch_and_write(GIO_File     fh,
      *     may not be aligned with file stripe boundaries.
      * end_loc is the ending file offset of this aggregator's file domain.
      */
-    off_list = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * ntimes);
+    off_list = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * ntimes);
     end_loc = -1;
     for (m = 0; m < ntimes; m++)
         off_list[m] = max_end_off;
@@ -1576,8 +1576,8 @@ LUSTRE_Exch_and_write(GIO_File     fh,
     for (i = 0; i < cb_nodes; i++) {
         send_list[i].count = 0;
 #ifdef HAVE_MPI_LARGE_COUNT
-        alloc_sz = sizeof(GIO_Count) * 2;
-        send_list[i].disp = (GIO_Count*) GIOI_Malloc(alloc_sz * nbufs);
+        alloc_sz = sizeof(MPI_Offset) * 2;
+        send_list[i].disp = (MPI_Offset*) GIOI_Malloc(alloc_sz * nbufs);
         send_list[i].len  = send_list[i].disp + nbufs;
 #else
         alloc_sz = sizeof(MPI_Aint) + sizeof(int);
@@ -1607,8 +1607,8 @@ LUSTRE_Exch_and_write(GIO_File     fh,
         for (i = 0; i < nprocs; i++) {
             recv_list[i].count = 0;
 #ifdef HAVE_MPI_LARGE_COUNT
-            alloc_sz = sizeof(GIO_Count) * 2;
-            recv_list[i].disp = (GIO_Count*) GIOI_Malloc(alloc_sz * nbufs);
+            alloc_sz = sizeof(MPI_Offset) * 2;
+            recv_list[i].disp = (MPI_Offset*) GIOI_Malloc(alloc_sz * nbufs);
             recv_list[i].len  = recv_list[i].disp + nbufs;
 #else
             alloc_sz = sizeof(MPI_Aint) + sizeof(int);
@@ -1634,8 +1634,8 @@ LUSTRE_Exch_and_write(GIO_File     fh,
         /* recv_count[j][i] is the number of off-len pairs to be received from
          * each proc i in round j
          */
-        recv_count    = (GIO_Count**) GIOI_Malloc(sizeof(GIO_Count*) * 3*nbufs);
-        recv_count[0] = (GIO_Count*)  GIOI_Malloc(sizeof(GIO_Count) * 3*nbufs * nprocs);
+        recv_count    = (MPI_Offset**) GIOI_Malloc(sizeof(MPI_Offset*) * 3*nbufs);
+        recv_count[0] = (MPI_Offset*)  GIOI_Malloc(sizeof(MPI_Offset) * 3*nbufs * nprocs);
 
         /* recv_size[j][i] is the receive size from proc i in round j */
         recv_size = recv_count + nbufs;
@@ -1673,10 +1673,10 @@ LUSTRE_Exch_and_write(GIO_File     fh,
      * only when user buffer is contiguous.
      */
     if (fh->bview.npairs <= 1)
-        this_buf_idx = (GIO_Count *) GIOI_Malloc(sizeof(GIO_Count) * cb_nodes);
+        this_buf_idx = (MPI_Offset *) GIOI_Malloc(sizeof(MPI_Offset) * cb_nodes);
 
     /* array of data sizes to be sent to each aggregator in a 2-phase round */
-    send_size = (GIO_Count *) GIOI_Calloc(cb_nodes, sizeof(GIO_Count));
+    send_size = (MPI_Offset *) GIOI_Calloc(cb_nodes, sizeof(MPI_Offset));
 
     /* min_st_off is the beginning file offsets of the aggregate access region
      *     of this collective write, and it has been downward aligned to the
@@ -1688,8 +1688,8 @@ LUSTRE_Exch_and_write(GIO_File     fh,
 
     ibuf = 0;
     for (m = 0; m < ntimes; m++) {
-        GIO_Count range_size;
-        GIO_Count range_off;
+        MPI_Offset range_size;
+        MPI_Offset range_off;
 
         /* Note that MPI standard (MPI 3.1 Chapter 13.1.1 and MPI 4.0 Chapter
          * 14.1.1) requires that the typemap displacements of etype and
@@ -1827,7 +1827,7 @@ LUSTRE_Exch_and_write(GIO_File     fh,
         }
 
         /* sender part */
-        GIO_Count self_count, self_start_pos;
+        MPI_Offset self_count, self_start_pos;
         if (recv_count == NULL) {
             self_count = 0;
             self_start_pos = 0;
@@ -2004,13 +2004,13 @@ LUSTRE_Exch_and_write(GIO_File     fh,
 static int
 offset_compare(const void *a, const void *b)
 {
-    if (*(GIO_Count*)a > *(GIO_Count*)b) return (1);
-    if (*(GIO_Count*)a < *(GIO_Count*)b) return (-1);
+    if (*(MPI_Offset*)a > *(MPI_Offset*)b) return (1);
+    if (*(MPI_Offset*)a < *(MPI_Offset*)b) return (-1);
     return (0);
 }
 
 /*----< GIO_Lustre_write_coll() >------------------------------------------*/
-GIO_Count
+MPI_Offset
 GIO_Lustre_write_coll(GIO_File  fh,
                         const void *buf)
 {
@@ -2023,9 +2023,9 @@ GIO_Lustre_write_coll(GIO_File  fh,
 
     int i, nprocs, myrank;
     int do_collect = 1, do_ex_wr;
-    GIO_Count st_off, end_off;
-    GIO_Count min_st_off = -1, max_end_off = -1;
-    GIO_Count w_len=0;
+    MPI_Offset st_off, end_off;
+    MPI_Offset min_st_off = -1, max_end_off = -1;
+    MPI_Offset w_len=0;
 
 #if GIO_PROFILING_MODE == 1
 MPI_Barrier(fh->comm);
@@ -2076,22 +2076,22 @@ double curT = MPI_Wtime();
          * write requests are interleaved among all ranks.
          */
         int is_interleaved, large_indv_req = 1;
-        GIO_Count striping_range, *st_end_all = NULL;
+        MPI_Offset striping_range, *st_end_all = NULL;
 
         /* Gather starting and ending file offsets of write requests from all
          * ranks into st_end_all[]. Even indices of st_end_all[] are starting
          * offsets, and odd indices are ending offsets.
          */
 #ifdef TRY_ALLREDUCE
-        st_end_all = (GIO_Count*) GIOI_Calloc(nprocs * 2, sizeof(GIO_Count));
+        st_end_all = (MPI_Offset*) GIOI_Calloc(nprocs * 2, sizeof(MPI_Offset));
         st_end_all[myrank*2]  = st_off;
         st_end_all[myrank*2+1] = end_off;
         MPI_Allreduce(MPI_IN_PLACE, st_end_all, nprocs*2, MPI_OFFSET, MPI_MAX, fh->comm);
 #else
-        GIO_Count st_end[2];
+        MPI_Offset st_end[2];
         st_end[0] = st_off;
         st_end[1] = end_off;
-        st_end_all = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs * 2);
+        st_end_all = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * nprocs * 2);
         MPI_Allgather(st_end, 2, MPI_OFFSET, st_end_all, 2, MPI_OFFSET, fh->comm);
 #endif
 
@@ -2105,7 +2105,7 @@ double curT = MPI_Wtime();
         striping_range = fh->hints->striping_unit * fh->hints->striping_factor;
         is_interleaved = 0;
 
-        qsort(st_end_all, nprocs, sizeof(GIO_Count)*2, offset_compare);
+        qsort(st_end_all, nprocs, sizeof(MPI_Offset)*2, offset_compare);
         for (i=0; i<2*nprocs; i+=2) { /* find the 1st non-zero sized */
             if (st_end_all[i] >= 0) {
                 min_st_off  = st_end_all[i];
@@ -2231,10 +2231,10 @@ double curT = MPI_Wtime();
      * aggregator's file domain. others_req[] matters only for aggregators.
      */
     GIO_Access *others_req;
-    GIO_Count **buf_idx = NULL;
+    MPI_Offset **buf_idx = NULL;
 
     if (fh->bview.npairs <= 1)
-        buf_idx = (GIO_Count**) GIOI_Malloc(sizeof(GIO_Count*) *
+        buf_idx = (MPI_Offset**) GIOI_Malloc(sizeof(MPI_Offset*) *
                                             fh->hints->cb_nodes);
 
     /* Calculate the portions of this rank's write requests that fall into the
@@ -2255,7 +2255,7 @@ double curT = MPI_Wtime();
              * prior independent I/O should have completed by now, so it is
              * safe to call lseek() to query the file size.
              */
-            GIO_Count cur_off, fsize;
+            MPI_Offset cur_off, fsize;
 
             cur_off = lseek(fh->fd_sys, 0, SEEK_CUR);
             fsize   = lseek(fh->fd_sys, 0, SEEK_END);
@@ -2274,7 +2274,7 @@ double curT = MPI_Wtime();
     else
         fh->skip_read = 1;
 
-// if (fh->is_agg && !fh->skip_read) { GIO_Count fsize = lseek(fh->fd_sys, 0, SEEK_END); printf("%d: %s at %d: skip_read=%d min_st_off=%lld fsize=%lld\n",myrank,__func__,__LINE__,fh->skip_read,min_st_off,fsize); }
+// if (fh->is_agg && !fh->skip_read) { MPI_Offset fsize = lseek(fh->fd_sys, 0, SEEK_END); printf("%d: %s at %d: skip_read=%d min_st_off=%lld fsize=%lld\n",myrank,__func__,__LINE__,fh->skip_read,min_st_off,fsize); }
 
     /* For aggregators, calculate the portions of all other ranks' requests
      * fall into this aggregator's file domain (note only I/O aggregators are

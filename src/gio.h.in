@@ -45,9 +45,8 @@ typedef struct GIOI_File *GIO_File;
 
 #if GIO_MPI_ENABLED == 1
 #include <mpi.h>
-typedef MPI_Count  GIO_Count;
 #else
-typedef long long int GIO_Count;
+typedef long long int MPI_Offset;
 typedef int* MPI_Comm;
 typedef int* MPI_Info;
 #define MPI_COMM_NULL NULL
@@ -78,10 +77,10 @@ extern int
 GIO_delete(const char *filename);
 
 extern int
-GIO_set_size(GIO_File fh, GIO_Count size);
+GIO_set_size(GIO_File fh, MPI_Offset size);
 
 extern int
-GIO_get_size(GIO_File fh, GIO_Count *size);
+GIO_get_size(GIO_File fh, MPI_Offset *size);
 
 extern int
 GIO_set_info(GIO_File fh, MPI_Info  users_info);
@@ -89,31 +88,39 @@ GIO_set_info(GIO_File fh, MPI_Info  users_info);
 extern int
 GIO_get_info(GIO_File fh, MPI_Info *info_used);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_write(GIO_File fh, const void *buf,
-                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
-                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
+                MPI_Offset file_npairs,
+                const MPI_Offset *file_offs, const MPI_Offset *file_lens,
+                MPI_Offset buf_npairs,
+                const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_write_all(GIO_File fh, const void *buf,
-                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
-                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
+                MPI_Offset file_npairs,
+                const MPI_Offset *file_offs, const MPI_Offset *file_lens,
+                MPI_Offset buf_npairs,
+                const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_read(GIO_File fh, void *buf,
-                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
-                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
+                MPI_Offset file_npairs,
+                const MPI_Offset *file_offs, const MPI_Offset *file_lens,
+                MPI_Offset buf_npairs,
+                const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_read_all(GIO_File fh, void *buf,
-                GIO_Count file_npairs, const GIO_Count *file_offs, const GIO_Count *file_lens,
-                GIO_Count buf_npairs,  const GIO_Count *buf_offs,  const GIO_Count *buf_lens);
+                MPI_Offset file_npairs,
+                const MPI_Offset *file_offs, const MPI_Offset *file_lens,
+                MPI_Offset buf_npairs,
+                const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
 extern int
-GIO_inq_malloc_size(MPI_Count *size);
+GIO_inq_malloc_size(MPI_Offset *size);
 
 extern int
-GIO_inq_malloc_max_size(MPI_Count *size);
+GIO_inq_malloc_max_size(MPI_Offset *size);
 
 extern int
 GIO_inq_malloc_list(void);

@@ -23,10 +23,10 @@
 #include <gioi.h>
 
 #if GIO_PROFILING_MODE == 1
-double    gio_wr_time[NTIMERS];
-double    gio_rd_time[NTIMERS];
-MPI_Count gio_wr_count[NTIMERS];
-MPI_Count gio_rd_count[NTIMERS];
+double     gio_wr_time[NTIMERS];
+double     gio_rd_time[NTIMERS];
+MPI_Offset gio_wr_count[NTIMERS];
+MPI_Offset gio_rd_count[NTIMERS];
 #endif
 
 /*----< construct_NUMA_node_list() >-----------------------------------------*/

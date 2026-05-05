@@ -386,13 +386,13 @@ void GIOI_Free_fn(void       *ptr,
 /* This is an independent subroutine, reporting the current aggregate size
  * allocated by malloc, yet to be freed.
  */
-int GIO_inq_malloc_size(GIO_Count *size)
+int GIO_inq_malloc_size(MPI_Offset *size)
 {
 #ifdef GIO_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
-    *size = (GIO_Count)gioi_mem_alloc;
+    *size = (MPI_Offset)gioi_mem_alloc;
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif
@@ -406,13 +406,13 @@ int GIO_inq_malloc_size(GIO_Count *size)
 /* This is an independent subroutine, reporting the max watermark ever
  * researched by malloc (aggregated amount).
  */
-int GIO_inq_malloc_max_size(GIO_Count *size)
+int GIO_inq_malloc_max_size(MPI_Offset *size)
 {
 #ifdef GIO_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
-    *size = (GIO_Count)gioi_max_mem_alloc;
+    *size = (MPI_Offset)gioi_max_mem_alloc;
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_unlock(&gioi_lock);
 #endif

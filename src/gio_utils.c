@@ -63,18 +63,18 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset)
 #endif
 
 void GIO_Heap_merge(GIO_Access      *others_req,
-                      const GIO_Count *count,
-                      GIO_Count      *srt_off,
-                      GIO_Count       *srt_len,
-                      const GIO_Count *start_pos,
+                      const MPI_Offset *count,
+                      MPI_Offset      *srt_off,
+                      MPI_Offset       *srt_len,
+                      const MPI_Offset *start_pos,
                       int                nprocs,
                       int                nprocs_recv,
-                      GIO_Count        total_elements)
+                      MPI_Offset        total_elements)
 {
     typedef struct {
-        GIO_Count *off_list;
-        GIO_Count *len_list;
-        GIO_Count nelem;
+        MPI_Offset *off_list;
+        MPI_Offset *len_list;
+        MPI_Offset nelem;
     } heap_struct;
 
     heap_struct *a, tmp;
@@ -216,12 +216,12 @@ char* GIOI_remove_file_system_type_prefix(const char *filename)
 int GIO_sanity_check(const char      *func_name,
                      int              lineno,
                      GIO_File         fh,
-                     GIO_Count        file_npairs,
-                     const GIO_Count *file_offs,
-                     const GIO_Count *file_lens,
-                     GIO_Count        buf_npairs,
-                     const GIO_Count *buf_offs,
-                     const GIO_Count *buf_lens)
+                     MPI_Offset        file_npairs,
+                     const MPI_Offset *file_offs,
+                     const MPI_Offset *file_lens,
+                     MPI_Offset        buf_npairs,
+                     const MPI_Offset *buf_offs,
+                     const MPI_Offset *buf_lens)
 {
     size_t j;
 
