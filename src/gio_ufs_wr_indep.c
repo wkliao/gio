@@ -20,7 +20,7 @@
 
 #include "gioi.h"
 
-/*----< GIO_UFS_write_contig() >-------------------------------------------*/
+/*----< GIO_UFS_write_contig() >---------------------------------------------*/
 GIO_Count
 GIO_UFS_write_contig(GIO_File    fh,
                      const void *buf,
@@ -96,7 +96,7 @@ err_out:
     return bytes_xfered;
 }
 
-/*----< GIO_UFS_write_indep() >--------------------------------------------*/
+/*----< GIO_UFS_write_indep() >----------------------------------------------*/
 /* This subroutine implements independent write. It consists of two major code
  * segments. The first one is for when data sieving is disabled and the second
  * one enabled.
@@ -189,17 +189,20 @@ GIO_UFS_write_indep(GIO_File    fh,
 
                 ptr += req_len;
                 tmp_buf_rem -= req_len;
-                if (tmp_buf_rem == 0) break;
 
                 if (buf_rem == req_len) { /* done with pair k */
                     k++;
-                    cpy_ptr = (char*)buf + fh->bview.off[k];
-                    buf_rem = fh->bview.len[k];
+                    if (k < fh->bview.npairs) {
+                        cpy_ptr = (char*)buf + fh->bview.off[k];
+                        buf_rem = fh->bview.len[k];
+                    }
                 }
                 else { /* there is still data remained in pair k */
                     cpy_ptr += req_len;
                     buf_rem -= req_len;
                 }
+
+                if (tmp_buf_rem == 0) break;
             }
 
             /* using tmp_buf to write to the file */
@@ -214,17 +217,20 @@ GIO_UFS_write_indep(GIO_File    fh,
 
                 ptr += req_len;
                 tmp_buf_rem -= req_len;
-                if (tmp_buf_rem == 0) break;
 
                 if (file_rem == req_len) { /* done with pair j */
                     j++;
-                    file_off = fh->fview.off[j];
-                    file_rem = fh->fview.len[j];
+                    if (j < fh->fview.npairs) {
+                        file_off = fh->fview.off[j];
+                        file_rem = fh->fview.len[j];
+                    }
                 }
                 else { /* there is still data remained in pair j */
                     file_off += req_len;
                     file_rem -= req_len;
                 }
+
+                if (tmp_buf_rem == 0) break;
             }
         }
 
@@ -339,9 +345,10 @@ GIO_UFS_write_indep(GIO_File    fh,
                 memcpy(ptr, cpy_ptr, cpy_len);
                 total_len += cpy_len;
 
-                /* Deduct remaining of temp buffer. Note even if tmp_buf_rem ==
-                 * 0, we still need continue to calculate disp for the next
-                 * round. */
+                /* Deduct remaining of temp buffer.
+                 * Note even if tmp_buf_rem == 0, we still need continue to
+                 * calculate disp for the next round.
+                 */
                 tmp_buf_rem -= cpy_len;
 
                 /* advance buffer pointer */
