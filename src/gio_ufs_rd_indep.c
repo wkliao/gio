@@ -21,12 +21,12 @@
 
 #include "gioi.h"
 
-/*----< GIO_UFS_read_contig() >--------------------------------------------*/
+/*----< GIO_UFS_read_contig() >----------------------------------------------*/
 GIO_Count
 GIO_UFS_read_contig(GIO_File    fh,
                     void       *buf,
                     GIO_Count   r_size,
-                    GIO_Count  offset)
+                    GIO_Count   offset)
 {
     char *p;
     ssize_t err = 0;
@@ -65,7 +65,7 @@ err_out:
     return bytes_xfered;
 }
 
-/*----< GIO_UFS_read_indep() >---------------------------------------------*/
+/*----< GIO_UFS_read_indep() >-----------------------------------------------*/
 /* This subroutine implements independent read. It consists of two major code
  * segments. The first one is for when data sieving is disabled and the second
  * one enabled.
@@ -161,17 +161,20 @@ GIO_UFS_read_indep(GIO_File  fh,
 
                 ptr += req_len;
                 tmp_buf_rem -= req_len;
-                if (tmp_buf_rem == 0) break;
 
                 if (file_rem == req_len) { /* done with pair j */
                     j++;
-                    file_off = fh->fview.off[j];
-                    file_rem = fh->fview.len[j];
+                    if (j < fh->fview.npairs) {
+                        file_off = fh->fview.off[j];
+                        file_rem = fh->fview.len[j];
+                    }
                 }
                 else { /* there is still data remained in pair j */
                     file_off += req_len;
                     file_rem -= req_len;
                 }
+
+                if (tmp_buf_rem == 0) break;
             }
 
             /* copy data from tmp_buf to buf */
@@ -183,17 +186,20 @@ GIO_UFS_read_indep(GIO_File  fh,
 
                 ptr += req_len;
                 tmp_buf_rem -= req_len;
-                if (tmp_buf_rem == 0) break;
 
                 if (buf_rem == req_len) { /* done with pair k */
                     k++;
-                    cpy_ptr = (char*)buf + fh->bview.off[k];
-                    buf_rem = fh->bview.len[k];
+                    if (k <fh->bview.npairs) {
+                        cpy_ptr = (char*)buf + fh->bview.off[k];
+                        buf_rem = fh->bview.len[k];
+                    }
                 }
                 else { /* there is still data remained in pair k */
                     cpy_ptr += req_len;
                     buf_rem -= req_len;
                 }
+
+                if (tmp_buf_rem == 0) break;
             }
         }
 
@@ -276,7 +282,8 @@ GIO_UFS_read_indep(GIO_File  fh,
             /* read a chunk from the file into tmp_buf */
             req_len = MIN(tmp_buf_size, lock_rem);
 
-            if (!fh->atomicity && fh->amode != O_RDONLY) /* lock the read-copy region */
+            if (!fh->atomicity && fh->amode != O_RDONLY)
+                /* lock the read-copy region */
                 GIO_WRITE_LOCK(fh, file_off, SEEK_SET, req_len);
 
             len = GIO_UFS_read_contig(fh, tmp_buf, req_len, file_off);
@@ -302,9 +309,10 @@ GIO_UFS_read_indep(GIO_File  fh,
                 memcpy(cpy_ptr, ptr, cpy_len);
                 total_len += cpy_len;
 
-                /* Deduct remaining of temp buffer. Note even if tmp_buf_rem ==
-                 * 0, we still need continue to calculate disp for the next
-                 * round. */
+                /* Deduct remaining of temp buffer.
+                 * Note even if tmp_buf_rem == 0, we still need continue to
+                 * calculate disp for the next round.
+                 */
                 tmp_buf_rem -= cpy_len;
 
                 /* advance buffer pointer */
@@ -357,7 +365,8 @@ GIO_UFS_read_indep(GIO_File  fh,
                 }
             }
 
-            if (!fh->atomicity && fh->amode != O_RDONLY) /* unlock the read-copy region */
+            if (!fh->atomicity && fh->amode != O_RDONLY)
+                /* unlock the read-copy region */
                 GIO_UNLOCK(fh, file_off, SEEK_SET, req_len);
 
             /* reduce remaining size to be locked */
