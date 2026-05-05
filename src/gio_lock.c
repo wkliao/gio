@@ -62,9 +62,9 @@ const char *GEN_flock_type_to_string(int type)
 int GIO_GEN_SetLock(GIO_File fh,
                       int        cmd,
                       int        type,
-                      GIO_Count offset,
+                      MPI_Offset offset,
                       int        whence,
-                      GIO_Count len)
+                      MPI_Offset len)
 {
     int err, err_count = 0, sav_errno;
     struct flock lock;
@@ -74,7 +74,7 @@ int GIO_GEN_SetLock(GIO_File fh,
         return GIO_NOERR;
 
     /* Depending on the compiler flags and options, struct flock may not be
-     * defined with types that are the same size as GIO_Counts.
+     * defined with types that are the same size as MPI_Offsets.
      */
 
     /* FIXME: This is a temporary hack until we use flock64 where available. It
@@ -129,9 +129,9 @@ int GIO_GEN_SetLock(GIO_File fh,
 int GIO_GEN_SetLock64(GIO_File fh,
                         int        cmd,
                         int        type,
-                        GIO_Count offset,
+                        MPI_Offset offset,
                         int        whence,
-                        GIO_Count len)
+                        MPI_Offset len)
 {
     int err;
 #ifdef _LARGEFILE64_SOURCE

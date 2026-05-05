@@ -22,14 +22,14 @@
 int GIO_Calc_aggregator(int              striping_unit,
                         int              cb_nodes,
                         const int       *cb_node_list, /* IN: [cb_nodes] */
-                        GIO_Count        min_st_off,
-                        GIO_Count        fd_size,
-                        const GIO_Count *fd_end,       /* IN: [cb_nodes] */
-                        GIO_Count        off,
-                        GIO_Count       *len)          /* IN/OUT: */
+                        MPI_Offset        min_st_off,
+                        MPI_Offset        fd_size,
+                        const MPI_Offset *fd_end,       /* IN: [cb_nodes] */
+                        MPI_Offset        off,
+                        MPI_Offset       *len)          /* IN/OUT: */
 {
     int rank_index, rank;
-    GIO_Count avail_bytes;
+    MPI_Offset avail_bytes;
 
     /* get an index into array of aggregators */
     rank_index = (int) ((off - min_st_off + fd_size) / fd_size - 1);
@@ -85,15 +85,15 @@ int GIO_Calc_aggregator(int              striping_unit,
  */
 void GIO_Calc_file_domains(int         cb_nodes,
                            int         striping_unit,
-                           GIO_Count   min_st_off,
-                           GIO_Count   max_end_off,
-                           GIO_Count **fd_end,    /* OUT: [cb_nodes] */
-                           GIO_Count  *fd_size)   /* OUT: */
+                           MPI_Offset   min_st_off,
+                           MPI_Offset   max_end_off,
+                           MPI_Offset **fd_end,    /* OUT: [cb_nodes] */
+                           MPI_Offset  *fd_size)   /* OUT: */
 {
     int i, rem_front, rem_back;
-    GIO_Count end_off;
+    MPI_Offset end_off;
 
-    *fd_end = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * cb_nodes);
+    *fd_end = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * cb_nodes);
 
     /* partition the aggregate access region equally among I/O aggregators */
     *fd_size  = (max_end_off - min_st_off + 1 + cb_nodes - 1) / cb_nodes;
@@ -156,20 +156,20 @@ void GIO_Calc_file_domains(int         cb_nodes,
  */
 void
 GIO_Calc_my_req(GIO_File          fh,
-                GIO_Count         min_st_off,
-                const GIO_Count  *fd_end,
-                GIO_Count         fd_size,
-                GIO_Count        *my_req_naggr,   /* OUT: */
-                GIO_Count        *count_per_aggr, /* OUT: [nprocs] */
+                MPI_Offset         min_st_off,
+                const MPI_Offset  *fd_end,
+                MPI_Offset         fd_size,
+                MPI_Offset        *my_req_naggr,   /* OUT: */
+                MPI_Offset        *count_per_aggr, /* OUT: [nprocs] */
                 GIO_Access      **my_req,         /* OUT: [nprocs] */
-                GIO_Count       **buf_idx)        /* OUT: [nprocs] */
+                MPI_Offset       **buf_idx)        /* OUT: [nprocs] */
 {
     size_t memLen, alloc_sz;
     int i, nprocs, aggr;
-    GIO_Count j, l;
-    GIO_Count fd_len, rem_len, curr_idx, off, *off_ptr;
+    MPI_Offset j, l;
+    MPI_Offset fd_len, rem_len, curr_idx, off, *off_ptr;
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count *len_ptr;
+    MPI_Offset *len_ptr;
 #else
     int *len_ptr;
 #endif
@@ -187,7 +187,7 @@ GIO_Calc_my_req(GIO_File          fh,
      * placed. This allows receives to be done without extra buffer. This can't
      * be done if buftype is not contiguous.
      */
-    *buf_idx = (GIO_Count*) GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    *buf_idx = (MPI_Offset*) GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
     for (i=0; i<nprocs; i++) /* initialize buf_idx to -1 */
         (*buf_idx)[i] = -1;
 
@@ -243,12 +243,12 @@ GIO_Calc_my_req(GIO_File          fh,
     }
 
 #ifdef HAVE_MPI_LARGE_COUNT
-    alloc_sz = sizeof(GIO_Count) * 2;
-    (*my_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    alloc_sz = sizeof(MPI_Offset) * 2;
+    (*my_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
     (*my_req)[0].lens = (*my_req)[0].offsets + memLen;
 #else
-    alloc_sz = sizeof(GIO_Count) + sizeof(int);
-    (*my_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    alloc_sz = sizeof(MPI_Offset) + sizeof(int);
+    (*my_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
     (*my_req)[0].lens = (int*) ((*my_req)[0].offsets + memLen);
 #endif
 
@@ -277,7 +277,7 @@ GIO_Calc_my_req(GIO_File          fh,
 
         /* for each separate contiguous access from this process */
         if ((*buf_idx)[aggr] == -1)
-            (*buf_idx)[aggr] = (GIO_Count) curr_idx;
+            (*buf_idx)[aggr] = (MPI_Offset) curr_idx;
 
         l = (*my_req)[aggr].count;
         curr_idx += fd_len;
@@ -301,7 +301,7 @@ GIO_Calc_my_req(GIO_File          fh,
                                        fd_size, fd_end, off, &fd_len);
 
             if ((*buf_idx)[aggr] == -1)
-                (*buf_idx)[aggr] = (GIO_Count) curr_idx;
+                (*buf_idx)[aggr] = (MPI_Offset) curr_idx;
 
             l = (*my_req)[aggr].count;
             curr_idx += fd_len;
@@ -324,22 +324,22 @@ GIO_Calc_my_req(GIO_File          fh,
  */
 void
 GIO_Calc_others_req(GIO_File           fh,
-                    GIO_Count          my_req_naggr,
-                    const GIO_Count   *count_per_aggr,/* IN: [nprocs] */
+                    MPI_Offset          my_req_naggr,
+                    const MPI_Offset   *count_per_aggr,/* IN: [nprocs] */
                     const GIO_Access  *my_req,        /* IN: [nprocs] */
                     GIO_Access       **others_req)    /* OUT: [nprocs] */
 {
     size_t alloc_sz, memLen;
     int i, j, nprocs, myrank;
     MPI_Request *reqs;
-    GIO_Count *off_ptr;
-    GIO_Count others_nprocs, *others_npairs;
+    MPI_Offset *off_ptr;
+    MPI_Offset others_nprocs, *others_npairs;
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count *len_ptr;
-    GIO_Count *mem_ptr;
+    MPI_Offset *len_ptr;
+    MPI_Offset *mem_ptr;
 #else
     int *len_ptr;
-    GIO_Count *mem_ptr;
+    MPI_Offset *mem_ptr;
 #endif
 
     MPI_Comm_size(fh->comm, &nprocs);
@@ -349,10 +349,10 @@ GIO_Calc_others_req(GIO_File           fh,
      * others_npairs[nprocs] is the number of contiguous offset-length pairs of
      * each process that fall into this aggregator's file domain.
      */
-    others_npairs = GIOI_Malloc(sizeof(GIO_Count) * nprocs);
+    others_npairs = GIOI_Malloc(sizeof(MPI_Offset) * nprocs);
 
-    MPI_Alltoall(count_per_aggr, 1, MPI_COUNT, others_npairs,
-                                 1, MPI_COUNT, fh->comm);
+    MPI_Alltoall(count_per_aggr, 1, MPI_OFFSET, others_npairs,
+                                 1, MPI_OFFSET, fh->comm);
 
     *others_req = (GIO_Access*) GIOI_Malloc(sizeof(GIO_Access) * nprocs);
 
@@ -361,15 +361,15 @@ GIO_Calc_others_req(GIO_File           fh,
         memLen += others_npairs[i];
 
 #ifdef HAVE_MPI_LARGE_COUNT
-    alloc_sz = sizeof(GIO_Count) * 2 + sizeof(GIO_Count);
-    (*others_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    alloc_sz = sizeof(MPI_Offset) * 2 + sizeof(MPI_Offset);
+    (*others_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
     (*others_req)[0].lens = (*others_req)[0].offsets + memLen;
-    (*others_req)[0].mem_ptrs = (GIO_Count*) ((*others_req)[0].lens + memLen);
+    (*others_req)[0].mem_ptrs = (MPI_Offset*) ((*others_req)[0].lens + memLen);
 #else
-    alloc_sz = sizeof(GIO_Count) + sizeof(int) + sizeof(GIO_Count);
-    (*others_req)[0].offsets = (GIO_Count *) GIOI_Malloc(alloc_sz * memLen);
+    alloc_sz = sizeof(MPI_Offset) + sizeof(int) + sizeof(MPI_Offset);
+    (*others_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
     (*others_req)[0].lens = (int *) ((*others_req)[0].offsets + memLen);
-    (*others_req)[0].mem_ptrs = (GIO_Count*) ((*others_req)[0].lens + memLen);
+    (*others_req)[0].mem_ptrs = (MPI_Offset*) ((*others_req)[0].lens + memLen);
 #endif
     off_ptr = (*others_req)[0].offsets;
     len_ptr = (*others_req)[0].lens;
@@ -406,10 +406,10 @@ GIO_Calc_others_req(GIO_File           fh,
              * Note (*others_req)[i].count == my_req[i].count
              */
             memcpy((*others_req)[i].offsets, my_req[i].offsets,
-                   my_req[i].count * sizeof(GIO_Count));
+                   my_req[i].count * sizeof(MPI_Offset));
 #ifdef HAVE_MPI_LARGE_COUNT
             memcpy((*others_req)[i].lens, my_req[i].lens,
-                   my_req[i].count * sizeof(GIO_Count));
+                   my_req[i].count * sizeof(MPI_Offset));
 #else
             memcpy((*others_req)[i].lens, my_req[i].lens,
                    my_req[i].count * sizeof(int));

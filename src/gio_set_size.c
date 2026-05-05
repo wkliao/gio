@@ -17,7 +17,7 @@
 
 /*----< GIO_set_size() >---------------------------------------------------*/
 int GIO_set_size(GIO_File   fh,
-                   GIO_Count size)
+                   MPI_Offset size)
 {
     int err = GIO_NOERR, rank;
 
@@ -36,10 +36,10 @@ int GIO_set_size(GIO_File   fh,
 
 /*----< GIO_get_size() >---------------------------------------------------*/
 int GIO_get_size(GIO_File    fh,
-                   GIO_Count *size)
+                   MPI_Offset *size)
 {
     int err = GIO_NOERR, rank;
-    GIO_Count msg[2];
+    MPI_Offset msg[2];
 
     MPI_Comm_rank(fh->comm, &rank);
 

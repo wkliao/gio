@@ -142,20 +142,20 @@ typedef struct {
 } GIO_Hints;
 
 typedef struct {
-    GIO_Count size;       /* total size in bytes, i.e. sum of len[*], 0 means
+    MPI_Offset size;       /* total size in bytes, i.e. sum of len[*], 0 means
                            * zero-sized request. -1 means view has been reset
                            * (in this case count should be 0).
                            */
-    GIO_Count npairs;     /* number of off-len pairs. 0 means the entire file
+    MPI_Offset npairs;     /* number of off-len pairs. 0 means the entire file
                            * is visible. 0 or 1 means buf_view/file_view is
                            * contiguous. Only when noncontiguous, off and len
                            * are malloc-ed. Note 0 does not necessarily means
                            * zero-sized request.
                            */
-    const GIO_Count *off; /* [count] byte offsets */
-    const GIO_Count *len; /* [count] block lengths in bytes */
-    GIO_Count        idx; /* index of off-len pairs consumed so far */
-    GIO_Count        rem; /* remaining amount in the pair to be consumed */
+    const MPI_Offset *off; /* [count] byte offsets */
+    const MPI_Offset *len; /* [count] block lengths in bytes */
+    MPI_Offset        idx; /* index of off-len pairs consumed so far */
+    MPI_Offset        rem; /* remaining amount in the pair to be consumed */
 } GIO_View;
 
 typedef struct GIOI_File {
@@ -188,18 +188,18 @@ typedef struct GIOI_File {
 } GIOI_File;
 
 typedef struct {
-    GIO_Count *offsets;   /* array of offsets */
+    MPI_Offset *offsets;   /* array of offsets */
 #ifdef HAVE_MPI_LARGE_COUNT
-    GIO_Count *lens;      /* array of lengths */
-    GIO_Count  *mem_ptrs; /* array of pointers. used in the read/write phase to
+    MPI_Offset *lens;      /* array of lengths */
+    MPI_Offset  *mem_ptrs; /* array of pointers. used in the read/write phase to
                            * indicate where the data is stored in memory
-                           * promoted to GIO_Count so we can construct types
+                           * promoted to MPI_Offset so we can construct types
                            * with _c versions
                            */
-    GIO_Count   count;    /* size of above arrays */
+    MPI_Offset   count;    /* size of above arrays */
 #else
     int        *lens;
-    MPI_Aint   *mem_ptrs;
+    MPI_Offset   *mem_ptrs;
     size_t      count;
 #endif
     size_t curr; /* index of offsets/lens that is currently being processed */
@@ -207,10 +207,10 @@ typedef struct {
 
 #if GIO_PROFILING_MODE == 1
 #define NTIMERS 10
-extern double    gio_wr_time[NTIMERS];
-extern double    gio_rd_time[NTIMERS];
-extern MPI_Count gio_wr_count[NTIMERS];
-extern MPI_Count gio_rd_count[NTIMERS];
+extern double     gio_wr_time[NTIMERS];
+extern double     gio_rd_time[NTIMERS];
+extern MPI_Offset gio_wr_count[NTIMERS];
+extern MPI_Offset gio_rd_count[NTIMERS];
 #endif
 
 /*---- APIs -----------------------------------------------------------------*/
@@ -220,9 +220,9 @@ extern MPI_Count gio_rd_count[NTIMERS];
 
 extern int
 GIO_sanity_check(const char *func_name, int lineno, GIO_File fh,
-              GIO_Count file_npairs, const GIO_Count *file_offs,
-              const GIO_Count *file_lens, GIO_Count buf_npairs,
-              const GIO_Count *buf_offs, const GIO_Count *buf_lens);
+              MPI_Offset file_npairs, const MPI_Offset *file_offs,
+              const MPI_Offset *file_lens, MPI_Offset buf_npairs,
+              const MPI_Offset *buf_offs, const MPI_Offset *buf_lens);
 
 /* utility APIs */
 extern char*
@@ -269,39 +269,39 @@ GIO_FileSysType(const char *filename);
 
 extern void
 GIO_Calc_file_domains(int cb_nodes, int striping_unit,
-                GIO_Count min_st_off, GIO_Count max_end_off,
-                GIO_Count **fd_end, GIO_Count *fd_size);
+                MPI_Offset min_st_off, MPI_Offset max_end_off,
+                MPI_Offset **fd_end, MPI_Offset *fd_size);
 
 extern void
-GIO_Calc_my_req(GIO_File fh, GIO_Count min_st_off,
-                const GIO_Count *fd_end, GIO_Count fd_size,
-                GIO_Count *my_req_naggr, GIO_Count *count_per_aggr,
-                GIO_Access **my_req, GIO_Count **buf_idx);
+GIO_Calc_my_req(GIO_File fh, MPI_Offset min_st_off,
+                const MPI_Offset *fd_end, MPI_Offset fd_size,
+                MPI_Offset *my_req_naggr, MPI_Offset *count_per_aggr,
+                GIO_Access **my_req, MPI_Offset **buf_idx);
 
 extern void
-GIO_Calc_others_req(GIO_File fh, GIO_Count my_req_naggr,
-                const GIO_Count *count_per_aggr, const GIO_Access *my_req,
+GIO_Calc_others_req(GIO_File fh, MPI_Offset my_req_naggr,
+                const MPI_Offset *count_per_aggr, const GIO_Access *my_req,
                 GIO_Access **others_req);
 
 extern int
 GIO_Calc_aggregator(int striping_unit, int cb_nodes, const int *cb_node_list,
-                GIO_Count min_st_off, GIO_Count fd_size,
-                const GIO_Count *fd_end, GIO_Count off, GIO_Count *len);
+                MPI_Offset min_st_off, MPI_Offset fd_size,
+                const MPI_Offset *fd_end, MPI_Offset off, MPI_Offset *len);
 
 extern void
-GIO_Heap_merge(GIO_Access *others_req, const GIO_Count *count,
-                GIO_Count *srt_off, GIO_Count *srt_len,
-                const GIO_Count *start_pos, int nprocs, int nprocs_recv,
-                GIO_Count total_elements);
+GIO_Heap_merge(GIO_Access *others_req, const MPI_Offset *count,
+                MPI_Offset *srt_off, MPI_Offset *srt_len,
+                const MPI_Offset *start_pos, int nprocs, int nprocs_recv,
+                MPI_Offset total_elements);
 
 /* File lock APIs */
 extern int
-GIO_GEN_SetLock(GIO_File fh, int cmd, int type, GIO_Count offset,
-                int whence, GIO_Count len);
+GIO_GEN_SetLock(GIO_File fh, int cmd, int type, MPI_Offset offset,
+                int whence, MPI_Offset len);
 
 extern int
-GIO_GEN_SetLock64(GIO_File fh, int cmd, int type, GIO_Count offset,
-                int whence, GIO_Count len);
+GIO_GEN_SetLock64(GIO_File fh, int cmd, int type, MPI_Offset offset,
+                int whence, MPI_Offset len);
 
 /* UFS driver APIs */
 extern int
@@ -310,25 +310,25 @@ GIO_UFS_open(GIO_File fh);
 extern int
 GIOI_UFS_open_on_demand(GIO_File fh);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_UFS_write_indep(GIO_File fh, const void *buf);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_UFS_write_coll(GIO_File fh, const void *buf);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_UFS_read_indep(GIO_File fh, void *buf);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_UFS_read_coll(GIO_File fh, void *buf);
 
-extern GIO_Count
-GIO_UFS_write_contig(GIO_File fh, const void *buf, GIO_Count w_size,
-                GIO_Count offset, int is_coll);
+extern MPI_Offset
+GIO_UFS_write_contig(GIO_File fh, const void *buf, MPI_Offset w_size,
+                MPI_Offset offset, int is_coll);
 
-extern GIO_Count
-GIO_UFS_read_contig(GIO_File fh, void *buf, GIO_Count r_size,
-                GIO_Count offset);
+extern MPI_Offset
+GIO_UFS_read_contig(GIO_File fh, void *buf, MPI_Offset r_size,
+                MPI_Offset offset);
 
 /* Lustre driver APIs */
 extern int
@@ -340,7 +340,7 @@ GIO_Lustre_open(GIO_File fh);
 extern int
 GIOI_Lustre_open_on_demand(GIO_File fh);
 
-extern GIO_Count
+extern MPI_Offset
 GIO_Lustre_write_coll(GIO_File fh, const void *buf);
 
 /* Error handle subroutines */
