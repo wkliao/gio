@@ -179,7 +179,7 @@ static int check_statfs(const char *filename, int64_t * file_id)
 /* Check if file system type from file name, using a system-dependent function
  * call.
  */
-int GIO_FileSysType(const char *filename)
+int GIOI_FileSysType(const char *filename)
 {
 
     int err, retry_cnt;
@@ -188,14 +188,14 @@ int GIO_FileSysType(const char *filename)
     char *colon = strchr(filename, ':');
     if (colon != NULL) { /* there is a prefix end with : */
         if (!strncmp(filename, "lustre", 6))
-            return GIO_FS_LUSTRE;
+            return GIOI_FS_LUSTRE;
         else if (!strncmp(filename, "ufs", 3))
-            return GIO_FS_UFS;
+            return GIOI_FS_UFS;
         else
             return 0;
     }
 #ifdef MIMIC_LUSTRE
-    return GIO_FS_LUSTRE;
+    return GIOI_FS_LUSTRE;
 #endif
 
     /* NFS can get stuck and end up returning ESTALE "forever" */
@@ -224,8 +224,8 @@ int GIO_FileSysType(const char *filename)
     }
 
     if (file_id == LL_SUPER_MAGIC)
-        return GIO_FS_LUSTRE;
+        return GIOI_FS_LUSTRE;
     else
-        return GIO_FS_UFS; /* UFS support if we don't know what else to use */
+        return GIOI_FS_UFS; /* UFS support if we don't know what else to use */
 }
 

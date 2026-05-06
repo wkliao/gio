@@ -94,7 +94,7 @@ AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(CONFIGURE_ARGS_CLEAN)
 
 dnl autoheader only adds these templates to the first invocation of AC_CONFIG_HEADERS
-AH_TEMPLATE([GIO_MALLOC_TRACE],   [Define if to enable malloc tracing])
+AH_TEMPLATE([GIOI_MALLOC_TRACE],   [Define if to enable malloc tracing])
 AH_TEMPLATE([HAVE_MPI_LARGE_COUNT], [Define if MPI APIs have arguments of type MPI_Count])
 
 dnl an option to use a customized rm command
@@ -404,7 +404,7 @@ debug_mode=0
 if test "x${debug}" = xyes; then
    dnl check required functions for enabling malloc tracing
    if test "x${ac_cv_func_tsearch}" = xyes && test "x${ac_cv_func_tdelete}" = xyes ; then
-      AC_DEFINE(GIO_MALLOC_TRACE)
+      AC_DEFINE(GIOI_MALLOC_TRACE)
    fi
    debug_mode=1
 fi
@@ -637,7 +637,7 @@ if test "x$enable_profiling" = "xyes" ; then
    if test "x${debug}" = xno; then
       dnl check required functions for enabling malloc tracing
       if test "x${ac_cv_func_tsearch}" = xyes && test "x${ac_cv_func_tdelete}" = xyes ; then
-         AC_DEFINE(GIO_MALLOC_TRACE)
+         AC_DEFINE(GIOI_MALLOC_TRACE)
       fi
    fi
 fi

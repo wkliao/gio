@@ -168,7 +168,7 @@ int UFS_set_cb_node_list(GIO_File fh)
 }
 #endif
 
-/*----< GIO_UFS_open() >---------------------------------------------------*/
+/*----< GIOI_UFS_open() >----------------------------------------------------*/
 /*   1. root creates/opens the file first
  *   2. root obtains file striping info, i.e. statbuf.st_blksize
  *   3. root broadcasts striping info
@@ -176,7 +176,7 @@ int UFS_set_cb_node_list(GIO_File fh)
  *   5. non-root processes opens the file
  */
 int
-GIO_UFS_open(GIO_File fh)
+GIOI_UFS_open(GIO_File fh)
 {
     char *mode_str = (fh->amode & O_CREAT) ? "creat" : "open";
     int err=GIO_NOERR, rank, perm, old_mask;
@@ -188,7 +188,7 @@ GIO_UFS_open(GIO_File fh)
 
     old_mask = umask(022);
     umask(old_mask);
-    perm = old_mask ^ GIO_PERM;
+    perm = old_mask ^ GIOI_PERM;
 
     /* Root process creates/opens the file first, obtains statbuf.st_blksize,
      * broadcasts it, and followed by the rest of processes open the file.
@@ -274,7 +274,7 @@ int GIOI_UFS_open_on_demand(GIO_File fh)
 
     old_mask = umask(022);
     umask(old_mask);
-    perm = old_mask ^ GIO_PERM;
+    perm = old_mask ^ GIOI_PERM;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 

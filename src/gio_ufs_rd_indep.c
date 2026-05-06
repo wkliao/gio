@@ -21,12 +21,12 @@
 
 #include "gioi.h"
 
-/*----< GIO_UFS_read_contig() >----------------------------------------------*/
+/*----< GIOI_UFS_read_contig() >---------------------------------------------*/
 MPI_Offset
-GIO_UFS_read_contig(GIO_File    fh,
-                    void       *buf,
-                    MPI_Offset   r_size,
-                    MPI_Offset   offset)
+GIOI_UFS_read_contig(GIO_File    fh,
+                     void       *buf,
+                     MPI_Offset  r_size,
+                     MPI_Offset  offset)
 {
     char *p;
     ssize_t err = 0;
@@ -65,7 +65,7 @@ err_out:
     return bytes_xfered;
 }
 
-/*----< GIO_UFS_read_indep() >-----------------------------------------------*/
+/*----< GIOI_UFS_read_indep() >----------------------------------------------*/
 /* This subroutine implements independent read. It consists of two major code
  * segments. The first one is for when data sieving is disabled and the second
  * one enabled.
@@ -74,8 +74,8 @@ err_out:
  * one round, which greatly simplifies the implementation of this subroutine.
  */
 MPI_Offset
-GIO_UFS_read_indep(GIO_File  fh,
-                   void     *buf)
+GIOI_UFS_read_indep(GIO_File  fh,
+                    void     *buf)
 {
     char *ptr, *cpy_ptr, *tmp_buf=NULL;
     MPI_Offset i, j, k, ntimes;
@@ -97,7 +97,7 @@ GIO_UFS_read_indep(GIO_File  fh,
     if (fh->fview.npairs <= 1 && fh->bview.npairs <= 1) {
         /* Both buffer and fileview are contiguous. */
         ptr = (char*)buf + fh->bview.off[0];
-        return GIO_UFS_read_contig(fh, ptr, fh->bview.size,
+        return GIOI_UFS_read_contig(fh, ptr, fh->bview.size,
                                      fh->fview.off[0]);
     }
 
@@ -111,7 +111,7 @@ GIO_UFS_read_indep(GIO_File  fh,
 
     /* if atomicity is true, lock (exclusive) the whole region */
     if (fh->atomicity && fh->amode != O_RDONLY)
-        GIO_WRITE_LOCK(fh, lock_off, SEEK_SET, lock_len);
+        GIOI_WRITE_LOCK(fh, lock_off, SEEK_SET, lock_len);
 
     /* When data sieving read is disabled or fview is contiguous, read is
      * carried out in multiple rounds. In each round, file data is first read
@@ -120,7 +120,7 @@ GIO_UFS_read_indep(GIO_File  fh,
      * buffer is non-contiguous and fview is contiguous, i.e. by reducing
      * the number of file reads.
      */
-    if (fh->hints->ds_read == GIO_HINT_DISABLE ||
+    if (fh->hints->ds_read == GIOI_HINT_DISABLE ||
         fh->fview.npairs <= 1) {
 
         if (fh->bview.npairs <= 1) { /* directly read to buf */
@@ -155,7 +155,7 @@ GIO_UFS_read_indep(GIO_File  fh,
             while (j < fh->fview.npairs) {
                 req_len = MIN(tmp_buf_rem, file_rem);
                 /* read from offset file_off of length req_len */
-                len = GIO_UFS_read_contig(fh, ptr, req_len, file_off);
+                len = GIOI_UFS_read_contig(fh, ptr, req_len, file_off);
                 if (len < 0) return len;
                 total_len += len;
 
@@ -284,9 +284,9 @@ GIO_UFS_read_indep(GIO_File  fh,
 
             if (!fh->atomicity && fh->amode != O_RDONLY)
                 /* lock the read-copy region */
-                GIO_WRITE_LOCK(fh, file_off, SEEK_SET, req_len);
+                GIOI_WRITE_LOCK(fh, file_off, SEEK_SET, req_len);
 
-            len = GIO_UFS_read_contig(fh, tmp_buf, req_len, file_off);
+            len = GIOI_UFS_read_contig(fh, tmp_buf, req_len, file_off);
             if (len < 0) return len;
 
             /* Copy data from tmp_buf to buf. Skip 'disp' bytes at the front
@@ -367,7 +367,7 @@ GIO_UFS_read_indep(GIO_File  fh,
 
             if (!fh->atomicity && fh->amode != O_RDONLY)
                 /* unlock the read-copy region */
-                GIO_UNLOCK(fh, file_off, SEEK_SET, req_len);
+                GIOI_UNLOCK(fh, file_off, SEEK_SET, req_len);
 
             /* reduce remaining size to be locked */
             lock_rem -= req_len;
@@ -382,7 +382,7 @@ GIO_UFS_read_indep(GIO_File  fh,
 
     /* if atomicity is true, unlock (exclusive) the whole region */
     if (fh->atomicity && fh->amode != O_RDONLY)
-        GIO_UNLOCK(fh, lock_off, SEEK_SET, lock_len);
+        GIOI_UNLOCK(fh, lock_off, SEEK_SET, lock_len);
 
 #if GIO_DEBUG_MODE == 1
     assert(total_len >= fh->bview.size);

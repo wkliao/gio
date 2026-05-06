@@ -59,12 +59,12 @@ const char *GEN_flock_type_to_string(int type)
     }
 }
 
-int GIO_GEN_SetLock(GIO_File fh,
-                      int        cmd,
-                      int        type,
-                      MPI_Offset offset,
-                      int        whence,
-                      MPI_Offset len)
+int GIOI_GEN_SetLock(GIO_File   fh,
+                     int        cmd,
+                     int        type,
+                     MPI_Offset offset,
+                     int        whence,
+                     MPI_Offset len)
 {
     int err, err_count = 0, sav_errno;
     struct flock lock;
@@ -95,7 +95,7 @@ int GIO_GEN_SetLock(GIO_File fh,
     lock.l_len = len;
 #endif
 
-    /* save previous errno in case we recover from retryable errors */
+    /* save previous errno in case we recover from retry-able errors */
     sav_errno = errno;
 
     errno = 0;
@@ -111,27 +111,27 @@ int GIO_GEN_SetLock(GIO_File fh,
                 "- If the file system is LUSTRE, ensure that the directory is mounted with the 'flock' option.\n",
                 __func__, fd_sys, GEN_flock_cmd_to_string(cmd), cmd,
                 GEN_flock_type_to_string(type), type, whence, err, errno);
-        perror("GIO_GEN_SetLock:");
-        fprintf(stderr, "GIO_GEN_SetLock:offset %lld, length %lld\n",
+        perror("GIOI_GEN_SetLock:");
+        fprintf(stderr, "GIOI_GEN_SetLock:offset %lld, length %lld\n",
                 offset, len);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     if (!err)
         /* report fcntl failure errno's (EBADF), otherwise restore previous
-         * errno in case we recovered from retryable errors
+         * errno in case we recovered from retry-able errors
          */
         errno = sav_errno;
 
     return (err == 0) ? GIO_NOERR : GIO_EFILE;
 }
 
-int GIO_GEN_SetLock64(GIO_File fh,
-                        int        cmd,
-                        int        type,
-                        MPI_Offset offset,
-                        int        whence,
-                        MPI_Offset len)
+int GIOI_GEN_SetLock64(GIO_File   fh,
+                       int        cmd,
+                       int        type,
+                       MPI_Offset offset,
+                       int        whence,
+                       MPI_Offset len)
 {
     int err;
 #ifdef _LARGEFILE64_SOURCE
@@ -159,8 +159,8 @@ int GIO_GEN_SetLock64(GIO_File fh,
                 "If the file system is NFS, you need to use NFS version 3, ensure that the lockd daemon is running on all the machines, and mount the directory with the 'noac' option (no attribute caching).\n",
                 __func__, fd_sys, GEN_flock_cmd_to_string(cmd), cmd,
                 GEN_flock_type_to_string(type), type, whence, err, errno);
-        perror("GIO_GEN_SetLock64:");
-        fprintf(stderr, "GIO_GEN_SetLock:offset %lld, length %lld\n",
+        perror("GIOI_GEN_SetLock64:");
+        fprintf(stderr, "GIOI_GEN_SetLock:offset %lld, length %lld\n",
                 offset, len);
         MPI_Abort(MPI_COMM_WORLD, 1);
     }

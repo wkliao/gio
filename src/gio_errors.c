@@ -32,9 +32,9 @@ strerror(int errnum)
 
 #include "gioi.h"
 
-/*----< GIOI_error_posix() ------------------------------------------------*/
+/*----< GIOI_error_posix() --------------------------------------------------*/
 /* Translate posix io error codes to GIO error codes */
-int GIOI_error_posix(char *err_msg)       /* extra error message */
+int GIOI_error_posix(char *err_msg)  /* extra error message */
 {
 #if defined(HAVE_STRERROR) && (HAVE_STRERROR == 1)
     char *errorString= strerror(errno);
@@ -66,7 +66,7 @@ int GIOI_error_posix(char *err_msg)       /* extra error message */
     return GIO_EFILE; /* other unknown file I/O error */
 }
 
-/*----< GIOI_error_mpi() --------------------------------------------------*/
+/*----< GIOI_error_mpi() >---------------------------------------------------*/
 /* translate MPI error codes to GIO error codes */
 int GIOI_error_mpi(int         mpi_errorcode,
                    const char *err_msg) /* extra error message */
