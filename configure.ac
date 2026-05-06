@@ -509,7 +509,7 @@ AC_CHECK_TYPE([blksize_t],[],[AC_DEFINE_UNQUOTED([blksize_t],[__blksize_t],[Prov
                #include <unistd.h>
                #endif]] )
 
-AC_CHECK_DECLS([pwrite])
+AC_CHECK_DECLS([pwrite, pread])
 
 #
 # Check if Lustre is available by verifying presence of lustre/lustre_user.h
