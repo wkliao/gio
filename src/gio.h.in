@@ -29,6 +29,7 @@
 #define GIO_ENEGATIVECNT       (-210) /* Negative count is specified */
 #define GIO_EFILE              (-204) /* Unknown error in file operation */
 #define GIO_ENOENT             (-220) /* File does not exist */
+#define GIO_EINTOVERFLOW       (-221) /* Overflow when type cast to 4-byte integer */
 #define GIO_ENOTENABLED        (-222) /* feature is not enabled */
 #define GIO_EBAD_FILE          (-223) /* Invalid file name (e.g., path name too long) */
 #define GIO_ENO_SPACE          (-224) /* Not enough space */

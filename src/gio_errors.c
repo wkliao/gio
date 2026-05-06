@@ -167,6 +167,8 @@ GIO_strerror(int err)
             /* This error is caused by an unsuccessful file I/O call. */
         case GIO_ENOENT:
             return strerror(ENOENT);
+        case GIO_EINTOVERFLOW:
+            return "Integer type casting overflow.";
         case GIO_ENOTENABLED:
             return "Feature is not enabled at configure time.";
         case GIO_EBAD_FILE:
@@ -219,6 +221,7 @@ GIO_strerrno(int err)
         RETURN_ERRORNO(GIO_ENEGATIVECNT)
         RETURN_ERRORNO(GIO_EFILE)
         RETURN_ERRORNO(GIO_ENOENT)
+        RETURN_ERRORNO(GIO_EINTOVERFLOW)
         RETURN_ERRORNO(GIO_ENOTENABLED)
         RETURN_ERRORNO(GIO_EBAD_FILE)
         RETURN_ERRORNO(GIO_ENO_SPACE)
