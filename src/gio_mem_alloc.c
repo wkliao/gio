@@ -43,8 +43,8 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-/* GIO_MALLOC_TRACE is set at the configure time when --enable-debug is used */
-#ifdef GIO_MALLOC_TRACE
+/* GIOI_MALLOC_TRACE is set at the configure time when --enable-debug is used */
+#ifdef GIOI_MALLOC_TRACE
 
 #ifdef HAVE_SEARCH_H
 #include <search.h> /* tfind(), tsearch() and tdelete() */
@@ -63,7 +63,7 @@ static pthread_mutex_t gioi_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #if 0
-/*----< gioi_init_malloc_tracing() >---------------------------------------*/
+/*----< gioi_init_malloc_tracing() >-----------------------------------------*/
 void gioi_init_malloc_tracing(void)
 {
     gioi_mem_alloc     = 0;
@@ -138,7 +138,7 @@ void gioi_add_mem_entry(void       *buf,
 #endif
 }
 
-/*----< gioi_del_mem_entry() >---------------------------------------------*/
+/*----< gioi_del_mem_entry() >-----------------------------------------------*/
 /* delete a malloc entry from the table */
 static
 int gioi_del_mem_entry(void *buf)
@@ -187,7 +187,7 @@ fn_exit:
 }
 #endif
 
-/*----< GIOI_Malloc_fn() >----------------------------------------------------*/
+/*----< GIOI_Malloc_fn() >---------------------------------------------------*/
 /* This subroutine is essentially the same as calling malloc().
  * According to malloc man page, If size is 0, then malloc() returns either
  * NULL, or a unique pointer value that can later be successfully passed to
@@ -221,7 +221,7 @@ void* GIOI_Malloc_fn(size_t      size,
         return NULL;
     }
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     gioi_add_mem_entry(buf, size, lineno, func, filename);
 #endif
 
@@ -229,7 +229,7 @@ void* GIOI_Malloc_fn(size_t      size,
 }
 
 
-/*----< GIOI_Strdup() >------------------------------------------------------*/
+/*----< GIOI_Strdup_fn() >---------------------------------------------------*/
 /* This subroutine is essentially the same as calling strdup().
  */
 void* GIOI_Strdup_fn(const char *src,
@@ -262,14 +262,14 @@ void* GIOI_Strdup_fn(const char *src,
 
     ((char*)buf)[len - 1] = '\0';
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     gioi_add_mem_entry(buf, len, lineno, func, filename);
 #endif
 
     return buf;
 }
 
-/*----< GIOI_Calloc_fn() >----------------------------------------------------*/
+/*----< GIOI_Calloc_fn() >---------------------------------------------------*/
 /* This subroutine is essentially the same as calling calloc().
  * According to calloc man page, If nelem is 0, then calloc() returns either
  * NULL, or a unique pointer value that can later be successfully passed to
@@ -298,7 +298,7 @@ void* GIOI_Calloc_fn(size_t      nelem,
         return NULL;
     }
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     gioi_add_mem_entry(buf, nelem * elsize, lineno, func, filename);
 #endif
 
@@ -306,7 +306,7 @@ void* GIOI_Calloc_fn(size_t      nelem,
 }
 
 
-/*----< GIOI_Realloc_fn() >---------------------------------------------------*/
+/*----< GIOI_Realloc_fn() >--------------------------------------------------*/
 /* This subroutine is essentially the same as calling realloc().
  * According to realloc man page, if ptr is NULL, then the call is equivalent
  * to malloc(size), for all values of size; if size is equal to zero, and ptr
@@ -336,7 +336,7 @@ void* GIOI_Realloc_fn(void       *ptr,
         return GIOI_Malloc_fn(0, lineno, func, filename);
     }
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     if (gioi_del_mem_entry(ptr) != 0) {
         fprintf(stderr, "GIOI_Realloc(_, %zd) failed in file %s func %s line %d\n",
                 size, filename, func, lineno);
@@ -351,7 +351,7 @@ void* GIOI_Realloc_fn(void       *ptr,
         return NULL;
     }
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     gioi_add_mem_entry(buf, size, lineno, func, filename);
 #endif
 
@@ -359,7 +359,7 @@ void* GIOI_Realloc_fn(void       *ptr,
 }
 
 
-/*----< GIOI_Free_fn() >------------------------------------------------------*/
+/*----< GIOI_Free_fn() >-----------------------------------------------------*/
 /* This subroutine is essentially the same as calling free().
  * According to free man page, free() frees the memory space pointed to by ptr,
  * which must have been returned by a previous call to malloc(), calloc() or
@@ -373,7 +373,7 @@ void GIOI_Free_fn(void       *ptr,
 {
     if (ptr == NULL) return;
 
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
     if (gioi_del_mem_entry(ptr) != 0)
         fprintf(stderr, "GIOI_Free failed in file %s func %s line %d\n",
                 filename, func, lineno);
@@ -388,7 +388,7 @@ void GIOI_Free_fn(void       *ptr,
  */
 int GIO_inq_malloc_size(MPI_Offset *size)
 {
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
@@ -408,7 +408,7 @@ int GIO_inq_malloc_size(MPI_Offset *size)
  */
 int GIO_inq_malloc_max_size(MPI_Offset *size)
 {
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif
@@ -424,11 +424,11 @@ int GIO_inq_malloc_max_size(MPI_Offset *size)
 
 /*----< GIO_inq_malloc_list() >---------------------------------------------*/
 /* This is an independent subroutine, reporting yet-to-be-freed malloc-ed
- * spance by walking the malloc tree and print yet-to-be-freed residues.
+ * space by walking the malloc tree and print yet-to-be-freed residues.
  */
 int GIO_inq_malloc_list(void)
 {
-#ifdef GIO_MALLOC_TRACE
+#ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
     pthread_mutex_lock(&gioi_lock);
 #endif

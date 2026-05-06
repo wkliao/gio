@@ -27,17 +27,17 @@
     if (flag) { \
         MPI_Info_set(fh->info, #key, value); \
         if (!strcasecmp(value, "true")) \
-            fh->hints->key = GIO_HINT_ENABLE; \
+            fh->hints->key = GIOI_HINT_ENABLE; \
         else if (!strcasecmp(value, "false")) \
-            fh->hints->key = GIO_HINT_DISABLE; \
+            fh->hints->key = GIOI_HINT_DISABLE; \
         else if (!strcasecmp(value, "automatic")) \
-            fh->hints->key = GIO_HINT_AUTO; \
+            fh->hints->key = GIOI_HINT_AUTO; \
         else if (!strcasecmp(value, "enable")) \
-            fh->hints->key = GIO_HINT_ENABLE; \
+            fh->hints->key = GIOI_HINT_ENABLE; \
         else if (!strcasecmp(value, "disable")) \
-            fh->hints->key = GIO_HINT_DISABLE; \
+            fh->hints->key = GIOI_HINT_DISABLE; \
         else if (!strcasecmp(value, "inherit")) \
-            fh->hints->key = GIO_STRIPING_INHERIT; \
+            fh->hints->key = GIOI_STRIPING_INHERIT; \
     }
 
 #define GET_INFO_STR(key) { \
@@ -86,13 +86,13 @@ int hint_consistency_check(GIO_File fh)
 
     if (rank == 0)
         /* broadcast root's hints */
-        MPI_Bcast(fh->hints, sizeof(GIO_Hints), MPI_BYTE, 0, fh->comm);
+        MPI_Bcast(fh->hints, sizeof(GIOI_Hints), MPI_BYTE, 0, fh->comm);
     else {
-        GIO_Hints *root_hints;
-        root_hints = (GIO_Hints*) GIOI_Malloc(sizeof(GIO_Hints));
+        GIOI_Hints *root_hints;
+        root_hints = (GIOI_Hints*) GIOI_Malloc(sizeof(GIOI_Hints));
 
         /* broadcast root's hints */
-        MPI_Bcast(root_hints, sizeof(GIO_Hints), MPI_BYTE, 0, fh->comm);
+        MPI_Bcast(root_hints, sizeof(GIOI_Hints), MPI_BYTE, 0, fh->comm);
 
         /* check hints individually against root's */
         CHECK_HINT(nc_striping);
@@ -147,40 +147,40 @@ GIO_set_info(GIO_File fh,
     /* initialize fh->info and hints to default values */
 
     /* buffer size for collective I/O */
-    MPI_Info_set(fh->info, "cb_buffer_size", GIO_CB_BUFFER_SIZE_DFLT);
-    fh->hints->cb_buffer_size = atoi(GIO_CB_BUFFER_SIZE_DFLT);
+    MPI_Info_set(fh->info, "cb_buffer_size", GIOI_CB_BUFFER_SIZE_DFLT);
+    fh->hints->cb_buffer_size = atoi(GIOI_CB_BUFFER_SIZE_DFLT);
 
     /* default is to let pncio automatically decide whether or not to use
      * collective buffering
      */
     MPI_Info_set(fh->info, "cb_read", "automatic");
-    fh->hints->cb_read = GIO_HINT_AUTO;
+    fh->hints->cb_read = GIOI_HINT_AUTO;
     MPI_Info_set(fh->info, "cb_write", "automatic");
-    fh->hints->cb_write = GIO_HINT_AUTO;
+    fh->hints->cb_write = GIOI_HINT_AUTO;
 
     /* cb_nodes may be set later right after file open call */
     fh->hints->cb_nodes = 0;
 
     /* buffer size for data sieving in independent reads */
-    MPI_Info_set(fh->info, "ind_rd_buffer_size", GIO_IND_RD_BUFFER_SIZE_DFLT);
-    fh->hints->ind_rd_buffer_size = atoi(GIO_IND_RD_BUFFER_SIZE_DFLT);
+    MPI_Info_set(fh->info, "ind_rd_buffer_size", GIOI_IND_RD_BUFFER_SIZE_DFLT);
+    fh->hints->ind_rd_buffer_size = atoi(GIOI_IND_RD_BUFFER_SIZE_DFLT);
 
     /* buffer size for data sieving in independent writes */
-    MPI_Info_set(fh->info, "ind_wr_buffer_size", GIO_IND_WR_BUFFER_SIZE_DFLT);
-    fh->hints->ind_wr_buffer_size = atoi(GIO_IND_WR_BUFFER_SIZE_DFLT);
+    MPI_Info_set(fh->info, "ind_wr_buffer_size", GIOI_IND_WR_BUFFER_SIZE_DFLT);
+    fh->hints->ind_wr_buffer_size = atoi(GIOI_IND_WR_BUFFER_SIZE_DFLT);
 
     /* default is to automatically decide when to use data sieving */
     MPI_Info_set(fh->info, "ds_read", "automatic");
-    fh->hints->ds_read = GIO_HINT_AUTO;
+    fh->hints->ds_read = GIOI_HINT_AUTO;
     MPI_Info_set(fh->info, "ds_write", "automatic");
-    fh->hints->ds_write = GIO_HINT_AUTO;
+    fh->hints->ds_write = GIOI_HINT_AUTO;
 
     /* File striping parameters will be retrieved from the file system set,
      * once the file is opened. These parameters can also be customized by
      * a user's info. Thus, default values used below are to indicate
      * whether or not they have been customized by the users.
      */
-    fh->hints->nc_striping = GIO_STRIPING_AUTO;
+    fh->hints->nc_striping = GIOI_STRIPING_AUTO;
     fh->hints->striping_unit = 0;
     fh->hints->striping_factor = 0;
     fh->hints->start_iodevice = -1;

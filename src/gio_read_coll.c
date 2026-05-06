@@ -32,7 +32,7 @@ GIO_read_all(GIO_File         fh,
         fh->fview.npairs = fh->bview.npairs = 0;
 
     /* Must participate collective operation even an error occurs above */
-    r_len = GIO_UFS_read_coll(fh, buf);
+    r_len = GIOI_UFS_read_coll(fh, buf);
 
     return (err == GIO_NOERR) ? r_len : err;
 }

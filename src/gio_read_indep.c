@@ -33,7 +33,7 @@ GIO_read(GIO_File         fh,
     if (file_npairs == 0 || buf_npairs == 0) /* zero-sized request */
         return 0;
 
-    if (fh->fstype == GIO_FS_UFS) {
+    if (fh->fstype == GIOI_FS_UFS) {
         if (!fh->is_open) {
             /* If file has not been opened (only happen to non-aggregators),
              * open it now and obtain hint striping_unit.
@@ -43,7 +43,7 @@ GIO_read(GIO_File         fh,
                 return err;
         }
     }
-    else if (fh->fstype == GIO_FS_LUSTRE) {
+    else if (fh->fstype == GIOI_FS_LUSTRE) {
         if (!fh->is_open) {
             /* If file has not been opened (only happen to non-aggregators),
              * open it now and obtain hint striping_unit.
@@ -56,7 +56,7 @@ GIO_read(GIO_File         fh,
     else
         return GIO_EFSTYPE;
 
-    r_len = GIO_UFS_read_indep(fh, buf);
+    r_len = GIOI_UFS_read_indep(fh, buf);
 
     return r_len; /* When r_len < 0, it is an NC error code */
 }

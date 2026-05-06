@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/*----< GIOI_pread() >-------------------------------------------------------*/
 ssize_t GIOI_pread(int fd, void *buf, size_t count, off_t offset)
 {
     off_t lseek_ret;
@@ -45,6 +46,7 @@ ssize_t GIOI_pread(int fd, void *buf, size_t count, off_t offset)
 #include <sys/types.h>
 #include <unistd.h>
 
+/*----< GIOI_pwrite() >------------------------------------------------------*/
 ssize_t GIOI_pwrite(int fd, const void *buf, size_t count, off_t offset)
 {
     off_t lseek_ret;
@@ -66,19 +68,20 @@ ssize_t GIOI_pwrite(int fd, const void *buf, size_t count, off_t offset)
 }
 #endif
 
-void GIO_Heap_merge(GIO_Access      *others_req,
-                      const MPI_Offset *count,
-                      MPI_Offset      *srt_off,
-                      MPI_Offset       *srt_len,
-                      const MPI_Offset *start_pos,
-                      int                nprocs,
-                      int                nprocs_recv,
-                      MPI_Offset        total_elements)
+/*----< GIOI_Heap_merge() >--------------------------------------------------*/
+void GIOI_Heap_merge(GIOI_Access      *others_req,
+                     const MPI_Offset *count,
+                     MPI_Offset       *srt_off,
+                     MPI_Offset       *srt_len,
+                     const MPI_Offset *start_pos,
+                     int               nprocs,
+                     int               nprocs_recv,
+                     MPI_Offset        total_elements)
 {
     typedef struct {
         MPI_Offset *off_list;
         MPI_Offset *len_list;
-        MPI_Offset nelem;
+        MPI_Offset  nelem;
     } heap_struct;
 
     heap_struct *a, tmp;
@@ -187,6 +190,7 @@ void GIO_Heap_merge(GIO_Access      *others_req,
     GIOI_Free(a);
 }
 
+/*----< GIOI_remove_file_system_type_prefix() >------------------------------*/
 /* File system types recognized by ROMIO in MPICH 4.0.0, and by GIO */
 static const char* fstypes[] = {"ufs", "nfs", "xfs", "pvfs2", "gpfs", "panfs", "lustre", "daos", "testfs", "ime", "quobyte", NULL};
 
@@ -217,17 +221,18 @@ char* GIOI_remove_file_system_type_prefix(const char *filename)
     return ret_filename;
 }
 
-int GIO_sanity_check(const char      *func_name,
-                     int              lineno,
-                     GIO_File         fh,
-                     MPI_Offset        file_npairs,
-                     const MPI_Offset *file_offs,
-                     const MPI_Offset *file_lens,
-                     MPI_Offset        buf_npairs,
-                     const MPI_Offset *buf_offs,
-                     const MPI_Offset *buf_lens)
+/*----< GIOI_sanity_check() >------------------------------------------------*/
+int GIOI_sanity_check(const char       *func_name,
+                      int               lineno,
+                      GIO_File          fh,
+                      MPI_Offset        file_npairs,
+                      const MPI_Offset *file_offs,
+                      const MPI_Offset *file_lens,
+                      MPI_Offset        buf_npairs,
+                      const MPI_Offset *buf_offs,
+                      const MPI_Offset *buf_lens)
 {
-    size_t j;
+    MPI_Offset j;
 
     if (fh == NULL) {
         fprintf(stderr, "Error in %s at %d: NULL file handle\n",

@@ -12,8 +12,8 @@
 /*----< GIO_write_all() >----------------------------------------------------*/
 /* This is a collective call. */
 MPI_Offset
-GIO_write_all(GIO_File         fh,
-              const void      *buf,
+GIO_write_all(GIO_File          fh,
+              const void       *buf,
               MPI_Offset        file_npairs,
               const MPI_Offset *file_offs,
               const MPI_Offset *file_lens,
@@ -32,10 +32,10 @@ GIO_write_all(GIO_File         fh,
         fh->fview.npairs = fh->bview.npairs = 0;
 
     /* Must participate collective operation even an error occurs above */
-    if (fh->fstype == GIO_FS_LUSTRE)
-        w_len = GIO_Lustre_write_coll(fh, buf);
-    else if (fh->fstype == GIO_FS_UFS)
-        w_len = GIO_UFS_write_coll(fh, buf);
+    if (fh->fstype == GIOI_FS_LUSTRE)
+        w_len = GIOI_Lustre_write_coll(fh, buf);
+    else if (fh->fstype == GIOI_FS_UFS)
+        w_len = GIOI_UFS_write_coll(fh, buf);
     else
         err = GIO_EFSTYPE;
 

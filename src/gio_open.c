@@ -160,7 +160,7 @@ GIO_open(MPI_Comm    comm,
     fh->NUMA_IDs  = NULL;
 
     /* allocate and initialize info object */
-    fh->hints = (GIO_Hints*) GIOI_Calloc(1, sizeof(GIO_Hints));
+    fh->hints = (GIOI_Hints*) GIOI_Calloc(1, sizeof(GIOI_Hints));
     fh->hints->NUMA_ID = -1; /* marked as not set */
 
     status = GIO_set_info(fh, info);
@@ -172,7 +172,7 @@ GIO_open(MPI_Comm    comm,
     }
 
     /* Find the file system type of the file to be opened. */
-    fh->fstype = GIO_FileSysType(filename);
+    fh->fstype = GIOI_FileSysType(filename);
 
     /* Remove the file system type prefix name if there is any. For example,
      * when filename = "lustre:/home/foo/testfile.nc", remove "lustre:" to make
@@ -219,15 +219,15 @@ GIO_open(MPI_Comm    comm,
     }
 
     /* Now, create/open the file. */
-    if (fh->fstype == GIO_FS_LUSTRE) {
+    if (fh->fstype == GIOI_FS_LUSTRE) {
         if (amode & O_CREAT)
-            err = GIO_Lustre_create(fh);
+            err = GIOI_Lustre_create(fh);
         else
-            err = GIO_Lustre_open(fh);
+            err = GIOI_Lustre_open(fh);
     }
-    else if (fh->fstype == GIO_FS_UFS) {
-        /* GIO_UFS_open uses fh->amode to tell if create or open */
-        err = GIO_UFS_open(fh);
+    else if (fh->fstype == GIOI_FS_UFS) {
+        /* GIOI_UFS_open uses fh->amode to tell if create or open */
+        err = GIOI_UFS_open(fh);
     }
     else
         err = GIO_EFSTYPE;

@@ -14,19 +14,19 @@
 #include <gioi.h>
 
 
-/*----< GIO_Calc_aggregator() >--------------------------------------------*/
+/*----< GIOI_Calc_aggregator() >---------------------------------------------*/
 /* This subroutine returns the rank ID of aggregator who is responsible for the
  * request represented by (off, *len). The "len" parameter may be modified to
  * indicate the amount of data actually available in this file domain.
  */
-int GIO_Calc_aggregator(int              striping_unit,
-                        int              cb_nodes,
-                        const int       *cb_node_list, /* IN: [cb_nodes] */
-                        MPI_Offset        min_st_off,
-                        MPI_Offset        fd_size,
-                        const MPI_Offset *fd_end,       /* IN: [cb_nodes] */
-                        MPI_Offset        off,
-                        MPI_Offset       *len)          /* IN/OUT: */
+int GIOI_Calc_aggregator(int               striping_unit,
+                         int               cb_nodes,
+                         const int        *cb_node_list, /* IN: [cb_nodes] */
+                         MPI_Offset        min_st_off,
+                         MPI_Offset        fd_size,
+                         const MPI_Offset *fd_end,       /* IN: [cb_nodes] */
+                         MPI_Offset        off,
+                         MPI_Offset       *len)          /* IN/OUT: */
 {
     int rank_index, rank;
     MPI_Offset avail_bytes;
@@ -37,7 +37,7 @@ int GIO_Calc_aggregator(int              striping_unit,
     if (striping_unit > 0) {
         /* Implementation for file domain alignment. Note fd_end[] have been
          * aligned with file system lock boundaries when it was produced by
-         * GIO_Calc_file_domains().
+         * GIOI_Calc_file_domains().
          */
         rank_index = 0;
         while (off > fd_end[rank_index])
@@ -71,7 +71,7 @@ int GIO_Calc_aggregator(int              striping_unit,
     return rank;
 }
 
-/*----<GIO_Calc_file_domains() >---------------------------------------------*/
+/*----<GIOI_Calc_file_domains() >--------------------------------------------*/
 /* Divide the aggregate access region of a collective read/write call into a
  * set of contiguous but disjoined file regions, called file domain (denoted as
  * 'fd'). Each of them is assigned to an I/O aggregator. An aggregator is
@@ -83,12 +83,12 @@ int GIO_Calc_aggregator(int              striping_unit,
  *      mapped to actual rank IDs in the communicator later.
  * fd_size - average size (ceiling) of file domain among cb_nodes.
  */
-void GIO_Calc_file_domains(int         cb_nodes,
-                           int         striping_unit,
-                           MPI_Offset   min_st_off,
-                           MPI_Offset   max_end_off,
-                           MPI_Offset **fd_end,    /* OUT: [cb_nodes] */
-                           MPI_Offset  *fd_size)   /* OUT: */
+void GIOI_Calc_file_domains(int          cb_nodes,
+                            int          striping_unit,
+                            MPI_Offset   min_st_off,
+                            MPI_Offset   max_end_off,
+                            MPI_Offset **fd_end,    /* OUT: [cb_nodes] */
+                            MPI_Offset  *fd_size)   /* OUT: */
 {
     int i, rem_front, rem_back;
     MPI_Offset end_off;
@@ -140,7 +140,7 @@ void GIO_Calc_file_domains(int         cb_nodes,
     }
 }
 
-/*----< GIO_Calc_my_req() >------------------------------------------------*/
+/*----< GIOI_Calc_my_req() >-------------------------------------------------*/
 /* This subroutine calculates every portions of this rank's requests that fall
  * into each aggregator's file domain. When returned, it set the following
  * variables:
@@ -155,14 +155,14 @@ void GIO_Calc_file_domains(int         cb_nodes,
  *      buffer is contiguous.
  */
 void
-GIO_Calc_my_req(GIO_File          fh,
-                MPI_Offset         min_st_off,
-                const MPI_Offset  *fd_end,
-                MPI_Offset         fd_size,
-                MPI_Offset        *my_req_naggr,   /* OUT: */
-                MPI_Offset        *count_per_aggr, /* OUT: [nprocs] */
-                GIO_Access      **my_req,         /* OUT: [nprocs] */
-                MPI_Offset       **buf_idx)        /* OUT: [nprocs] */
+GIOI_Calc_my_req(GIO_File           fh,
+                 MPI_Offset         min_st_off,
+                 const MPI_Offset  *fd_end,
+                 MPI_Offset         fd_size,
+                 MPI_Offset        *my_req_naggr,   /* OUT: */
+                 MPI_Offset        *count_per_aggr, /* OUT: [nprocs] */
+                 GIOI_Access      **my_req,         /* OUT: [nprocs] */
+                 MPI_Offset       **buf_idx)        /* OUT: [nprocs] */
 {
     size_t memLen, alloc_sz;
     int i, nprocs, aggr;
@@ -180,7 +180,7 @@ GIO_Calc_my_req(GIO_File          fh,
 
     /* Contents of count_per_aggr[] should be initialized to all 0s */
 
-    *my_req = (GIO_Access*) GIOI_Calloc(nprocs, sizeof(GIO_Access));
+    *my_req = (GIOI_Access*) GIOI_Calloc(nprocs, sizeof(GIOI_Access));
 
     /* buf_idx is relevant only if the user buffer is contiguous. buf_idx[i]
      * stores the index into user_buf where data received from rank i should be
@@ -196,8 +196,8 @@ GIO_Calc_my_req(GIO_File          fh,
 
 #if GIO_DEBUG_MODE == 1
     /* For non-zero sized requests, fh->fview.npairs has been checked and
-     * adjusted to a positive number at the beginning of GIO_UFS_read_coll()
-     * and GIO_UFS_write_coll().
+     * adjusted to a positive number at the beginning of GIOI_UFS_read_coll()
+     * and GIOI_UFS_write_coll().
      */
     assert(fh->fview.npairs > 0);
 
@@ -212,13 +212,13 @@ GIO_Calc_my_req(GIO_File          fh,
         off = fh->fview.off[i];
         fd_len = fh->fview.len[i];
         /* Note: we set fd_len to be the total size of the access, then
-         * GIO_Calc_aggregator() will modify the value to return the
+         * GIOI_Calc_aggregator() will modify the value to return the
          * amount that was available from the file domain that holds the
          * first part of the access.
          */
-        aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
-                                   fh->hints->cb_nodes, fh->hints->aggr_ranks,
-                                   min_st_off, fd_size, fd_end, off, &fd_len);
+        aggr = GIOI_Calc_aggregator(fh->hints->striping_unit,
+                                    fh->hints->cb_nodes, fh->hints->aggr_ranks,
+                                    min_st_off, fd_size, fd_end, off, &fd_len);
         count_per_aggr[aggr]++;
         memLen++;
 
@@ -231,10 +231,10 @@ GIO_Calc_my_req(GIO_File          fh,
         while (rem_len != 0) {
             off += fd_len;      /* point to first remaining byte */
             fd_len = rem_len;   /* save remaining size, pass to calc */
-            aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
-                                       fh->hints->cb_nodes,
-                                       fh->hints->aggr_ranks, min_st_off,
-                                       fd_size, fd_end, off, &fd_len);
+            aggr = GIOI_Calc_aggregator(fh->hints->striping_unit,
+                                        fh->hints->cb_nodes,
+                                        fh->hints->aggr_ranks, min_st_off,
+                                        fd_size, fd_end, off, &fd_len);
 
             count_per_aggr[aggr]++;
             memLen++;
@@ -271,9 +271,9 @@ GIO_Calc_my_req(GIO_File          fh,
         off = fh->fview.off[j];
         fd_len = fh->fview.len[j];
 
-        aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
-                                   fh->hints->cb_nodes, fh->hints->aggr_ranks,
-                                   min_st_off, fd_size, fd_end, off, &fd_len);
+        aggr = GIOI_Calc_aggregator(fh->hints->striping_unit,
+                                    fh->hints->cb_nodes, fh->hints->aggr_ranks,
+                                    min_st_off, fd_size, fd_end, off, &fd_len);
 
         /* for each separate contiguous access from this process */
         if ((*buf_idx)[aggr] == -1)
@@ -295,10 +295,10 @@ GIO_Calc_my_req(GIO_File          fh,
         while (rem_len != 0) {
             off += fd_len;
             fd_len = rem_len;
-            aggr = GIO_Calc_aggregator(fh->hints->striping_unit,
-                                       fh->hints->cb_nodes,
-                                       fh->hints->aggr_ranks, min_st_off,
-                                       fd_size, fd_end, off, &fd_len);
+            aggr = GIOI_Calc_aggregator(fh->hints->striping_unit,
+                                        fh->hints->cb_nodes,
+                                        fh->hints->aggr_ranks, min_st_off,
+                                        fd_size, fd_end, off, &fd_len);
 
             if ((*buf_idx)[aggr] == -1)
                 (*buf_idx)[aggr] = (MPI_Offset) curr_idx;
@@ -314,7 +314,7 @@ GIO_Calc_my_req(GIO_File          fh,
     }
 }
 
-/*----< GIO_Calc_others_req() >--------------------------------------------*/
+/*----< GIOI_Calc_others_req() >---------------------------------------------*/
 /* This subroutine produces results that are only relevant to the I/O
  * aggregators. Based on every rank's my_req, it calculates through MPI
  * communication for what portions of requests from all processes that fall
@@ -323,11 +323,11 @@ GIO_Calc_my_req(GIO_File          fh,
  *      carried out by this aggregator.
  */
 void
-GIO_Calc_others_req(GIO_File           fh,
-                    MPI_Offset          my_req_naggr,
-                    const MPI_Offset   *count_per_aggr,/* IN: [nprocs] */
-                    const GIO_Access  *my_req,        /* IN: [nprocs] */
-                    GIO_Access       **others_req)    /* OUT: [nprocs] */
+GIOI_Calc_others_req(GIO_File            fh,
+                     MPI_Offset          my_req_naggr,
+                     const MPI_Offset   *count_per_aggr,/* IN: [nprocs] */
+                     const GIOI_Access  *my_req,        /* IN: [nprocs] */
+                     GIOI_Access       **others_req)    /* OUT: [nprocs] */
 {
     size_t alloc_sz, memLen;
     int i, j, nprocs, myrank;
@@ -354,7 +354,7 @@ GIO_Calc_others_req(GIO_File           fh,
     MPI_Alltoall(count_per_aggr, 1, MPI_OFFSET, others_npairs,
                                  1, MPI_OFFSET, fh->comm);
 
-    *others_req = (GIO_Access*) GIOI_Malloc(sizeof(GIO_Access) * nprocs);
+    *others_req = (GIOI_Access*) GIOI_Malloc(sizeof(GIOI_Access) * nprocs);
 
     memLen = 0;
     for (i=0; i<nprocs; i++)

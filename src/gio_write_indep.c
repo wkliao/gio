@@ -12,8 +12,8 @@
 /*----< GIO_write() >--------------------------------------------------------*/
 /* This is an independent call. */
 MPI_Offset
-GIO_write(GIO_File         fh,
-          const void      *buf,
+GIO_write(GIO_File          fh,
+          const void       *buf,
           MPI_Offset        file_npairs,
           const MPI_Offset *file_offs,
           const MPI_Offset *file_lens,
@@ -33,7 +33,7 @@ GIO_write(GIO_File         fh,
     if (file_npairs == 0 || buf_npairs == 0) /* zero-sized request */
         return 0;
 
-    if (fh->fstype == GIO_FS_UFS) {
+    if (fh->fstype == GIOI_FS_UFS) {
         if (!fh->is_open) {
             /* If file has not been opened (only happen to non-aggregators),
              * open it now and obtain hint striping_unit.
@@ -43,9 +43,9 @@ GIO_write(GIO_File         fh,
                 return err;
         }
 
-        w_len = GIO_UFS_write_indep(fh, buf);
+        w_len = GIOI_UFS_write_indep(fh, buf);
     }
-    else if (fh->fstype == GIO_FS_LUSTRE) {
+    else if (fh->fstype == GIOI_FS_LUSTRE) {
         if (!fh->is_open) {
             /* If file has not been opened (only happen to non-aggregators),
              * open it now and obtain hint striping_unit.
@@ -55,7 +55,7 @@ GIO_write(GIO_File         fh,
                 return err;
         }
 
-        w_len = GIO_UFS_write_indep(fh, buf);
+        w_len = GIOI_UFS_write_indep(fh, buf);
     }
     else
         return GIO_EFSTYPE;
