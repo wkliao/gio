@@ -77,7 +77,7 @@ GIO_UFS_write_contig(GIO_File    fh,
     p = (char *) buf;
     while (bytes_xfered < w_size) {
         w_count = w_size - bytes_xfered;
-        err = pwrite(fh->fd_sys, p, w_count, offset + bytes_xfered);
+        err = GIOI_pwrite(fh->fd_sys, p, w_count, offset + bytes_xfered);
         if (err == -1)
             goto err_out;
         if (err == 0)

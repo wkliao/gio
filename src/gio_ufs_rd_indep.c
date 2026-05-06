@@ -46,7 +46,7 @@ GIO_UFS_read_contig(GIO_File    fh,
     p = (char *) buf;
     while (bytes_xfered < r_size) {
         r_count = r_size - bytes_xfered;
-        err = pread(fh->fd_sys, p, r_count, offset + bytes_xfered);
+        err = GIOI_pread(fh->fd_sys, p, r_count, offset + bytes_xfered);
         if (err == -1)
             goto err_out;
         if (err == 0)

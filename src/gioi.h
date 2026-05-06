@@ -330,6 +330,20 @@ extern MPI_Offset
 GIO_UFS_read_contig(GIO_File fh, void *buf, MPI_Offset r_size,
                 MPI_Offset offset);
 
+#if HAVE_DECL_PREAD == 1
+#define GIOI_pread pread
+#else
+extern ssize_t
+GIOI_pread(int fd, void *buf, size_t count, off_t offset);
+#endif
+
+#if HAVE_DECL_PWRITE == 1
+#define GIOI_pwrite pwrite
+#else
+extern ssize_t
+GIOI_pwrite(int fd, const void *buf, size_t count, off_t offset);
+#endif
+
 /* Lustre driver APIs */
 extern int
 GIO_Lustre_create(GIO_File fh);
