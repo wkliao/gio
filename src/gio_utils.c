@@ -92,8 +92,8 @@ void GIOI_Heap_merge(GIOI_Access      *others_req,
     j = 0;
     for (i = 0; i < nprocs; i++)
         if (count[i]) {
-            a[j].off_list = &(others_req[i].offsets[start_pos[i]]);
-            a[j].len_list = &(others_req[i].lens[start_pos[i]]);
+            a[j].off_list = &(others_req[i].off[start_pos[i]]);
+            a[j].len_list = &(others_req[i].len[start_pos[i]]);
             a[j].nelem = count[i];
             j++;
         }
@@ -307,6 +307,143 @@ int GIOI_sanity_check(const char       *func_name,
                 "Error in %s at %d: file and buffer view amounts mismatched\n",
                 __func__, __LINE__);
         return GIO_EINVAL;
+    }
+
+    return GIO_NOERR;
+}
+
+/*----< GIOI_type_contiguous() >---------------------------------------------*/
+int GIOI_type_contiguous(MPI_Offset    count,
+                         MPI_Datatype *newType)
+{
+    char *mpi_name;
+    int err;
+
+    *newType = MPI_BYTE;
+
+    if (count == 0) return GIO_NOERR;
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    err = MPI_Type_contiguous_c((MPI_Count)count, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_contiguous_c";
+#else
+    if (count > INT_MAX) {
+        *newType = MPI_DATATYPE_NULL;
+        return GIO_EINTOVERFLOW;
+    }
+
+    err = MPI_Type_contiguous((int)count, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_contiguous";
+#endif
+
+    if (err != MPI_SUCCESS) {
+        *newType = MPI_DATATYPE_NULL;
+        return GIOI_error_mpi(err, mpi_name);
+    }
+    else {
+        err = MPI_Type_commit(newType);
+        if (err != MPI_SUCCESS) {
+            MPI_Type_free(newType);
+            *newType = MPI_DATATYPE_NULL;
+            return GIOI_error_mpi(err,"MPI_Type_commit");
+        }
+    }
+
+    return GIO_NOERR;
+}
+
+/*----< GIOI_type_create_hindexed() >----------------------------------------*/
+int GIOI_type_create_hindexed(MPI_Offset    count,
+                              MPI_Offset   *off,
+                              MPI_Offset   *len,
+                              MPI_Datatype *newType)
+{
+    char *mpi_name;
+    int err;
+
+    *newType = MPI_BYTE;
+
+    if (count == 0) return GIO_NOERR;
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    /* Note argument array_of_displacements[] in MPI_Type_create_hindexed_c()
+     * is of type 'MPI_Count'.
+     */
+    MPI_Count *disp, *blklen;
+#if SIZEOF_MPI_OFFSET == SIZEOF_MPI_COUNT
+    disp = off;
+    blklen = len;
+#else
+    MPI_Count j;
+    disp   = (MPI_Count*) GIOI_Malloc(sizeof(MPI_Count) * count);
+    blklen = (MPI_Count*) GIOI_Malloc(sizeof(MPI_Count) * count);
+    for (j=0; j<count; j++) {
+        disp[j]   = (MPI_Count)off[j];
+        blklen[j] = (MPI_Count)len[j];
+    }
+#endif
+    err = MPI_Type_create_hindexed_c((MPI_Count)count, blklen, disp, MPI_BYTE,
+                                     newType);
+    mpi_name = "MPI_Type_create_hindexed_c";
+#if SIZEOF_MPI_OFFSET != SIZEOF_MPI_COUNT
+    GIOI_Free(blklen);
+    GIOI_Free(disp);
+#endif
+#else
+    /* MPI _c APIs are not available */
+    int *blklen;
+    MPI_Aint *disp;
+
+    if (count > INT_MAX) {
+        /* count argument in MPI_Type_create_hindexed() is of type int */
+        *newType = MPI_DATATYPE_NULL;
+        return GIO_EINTOVERFLOW;
+    }
+
+#if SIZEOF_MPI_AINT == SIZEOF_MPI_OFFSET
+    disp = (MPI_Aint*) off;
+#else
+    MPI_Offset j;
+    disp = (MPI_Aint*) GIOI_Malloc(sizeof(MPI_Aint) * count);
+    for (j=0; j<count; j++)
+        disp[j] = (MPI_Aint)off[j];
+#endif
+#if SIZEOF_INT == SIZEOF_MPI_OFFSET
+    blklen = (int*) len;
+#else
+    MPI_Offset k;
+    blklen = (int*) GIOI_Malloc(sizeof(int) * count);
+    for (k=0; k<count; k++) {
+        if (len[k] > INT_MAX) {
+            *newType = MPI_DATATYPE_NULL;
+            return GIO_EINTOVERFLOW;
+        }
+        blklen[k] = (int)len[k];
+    }
+#endif
+
+    err = MPI_Type_create_hindexed((int)count, blklen, disp, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_create_hindexed";
+
+#if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET
+    GIOI_Free(disp);
+#endif
+#if SIZEOF_INT != SIZEOF_MPI_OFFSET
+    GIOI_Free(blklen);
+#endif
+#endif
+
+    if (err != MPI_SUCCESS) {
+        *newType = MPI_DATATYPE_NULL;
+        return GIOI_error_mpi(err, mpi_name);
+    }
+    else {
+        err = MPI_Type_commit(newType);
+        if (err != MPI_SUCCESS) {
+            MPI_Type_free(newType);
+            *newType = MPI_DATATYPE_NULL;
+            return GIOI_error_mpi(err,"MPI_Type_commit");
+        }
     }
 
     return GIO_NOERR;
