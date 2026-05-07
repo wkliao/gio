@@ -427,15 +427,29 @@ if test "x$MPICC" != x ; then
       MPI_Count is required.
       -----------------------------------------------------------------------])
    fi
+   AC_CHECK_SIZEOF([MPI_Count], [], [#include <mpi.h>])
+
+   if test $ac_cv_sizeof_MPI_Offset != $ac_cv_sizeof_MPI_Count ; then
+      AC_MSG_ERROR([
+      -----------------------------------------------------------------------
+      Size of data type MPI_Count ($ac_cv_sizeof_MPI_Count) must be equal to
+      the size of MPI_Offset ($ac_cv_sizeof_MPI_Offset).  An MPI library
+      meeting such requirement is required. Abort...
+      -----------------------------------------------------------------------])
+   fi
 
    # MPI_Count was first introduced in MPI 3.0. Check MPI functions used by
    # GIO that contain arguments of type MPI_Count. If one of the below APIs is
    # not available, have_mpi_large_count_apis will be set to no.
    have_mpi_large_count_apis=yes
-   AC_CHECK_FUNCS([MPI_Bcast_c \
+   AC_CHECK_FUNCS([MPI_Isend_c \
+                   MPI_Issend_c \
+                   MPI_Irecv_c \
+                   MPI_Alltoallv_c \
+                   MPI_Alltoallw_c \
+                   MPI_Type_create_hindexed_c \
                    MPI_Get_count_c \
-                   MPI_Isend_c \
-                   MPI_Irecv_c], [], [have_mpi_large_count_apis=no])
+                   MPI_Unpack_c], [], [have_mpi_large_count_apis=no])
    UD_MSG_DEBUG([have_mpi_large_count_apis=$have_mpi_large_count_apis])
    if test "x$have_mpi_large_count_apis" = "xyes" ; then
       AC_DEFINE(HAVE_MPI_LARGE_COUNT, 1)
