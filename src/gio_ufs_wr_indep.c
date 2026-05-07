@@ -41,8 +41,9 @@ GIOI_UFS_write_contig(GIO_File    fh,
 #endif
 
 #if GIO_DEBUG_MODE == 1 && (defined(HAVE_LUSTRE) || defined(MIMIC_LUSTRE))
-    if (is_coll) { /* This call arrived from a collective write call */
-        int rank, ost_blk;
+    if (is_coll && fh->hints->lustre_num_osts > 0) {
+        /* This call arrived from GIOI_Lustre_write_coll() */
+        int rank;
         static int striping_factor=-1, cb_nodes=-1;
         static MPI_Offset first_ost_id = -1;
         MPI_Offset ost_id;
@@ -54,19 +55,16 @@ GIOI_UFS_write_contig(GIO_File    fh,
             cb_nodes != fh->hints->cb_nodes)
             first_ost_id = -1;
 
-        if (fh->hints->striping_factor > fh->hints->cb_nodes)
-            ost_blk = fh->hints->striping_factor / fh->hints->cb_nodes;
-        else
-            ost_blk = 1;
-
-        ost_id = (offset / fh->hints->striping_unit) % fh->hints->cb_nodes;
-        ost_id /= ost_blk;
+        ost_id = (offset / fh->hints->striping_unit)
+               % fh->hints->lustre_num_osts;
 
         if (first_ost_id == -1)
             first_ost_id = ost_id;
-        else if (ost_id != first_ost_id) {
-            printf("Warning in %s rank %d: pwrite offset=%lld w_size=%lld ost_id=%lld != 1st ost %lld\n",__func__,rank,offset,w_size,ost_id,first_ost_id);
-            first_ost_id = ost_id;
+        else if (ost_id != fh->hints->NUMA_ID) {
+            /* Processes running on the same NUMA node should alwasy write to
+             * the same OST.
+             */
+            printf("Warning %s on rank %d: pwrite offset=%lld w_size=%lld ost_id=%lld != NUMA_ID %d\n",__func__,rank,offset,w_size,ost_id,fh->hints->NUMA_ID);
         }
     }
 #endif
