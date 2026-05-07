@@ -159,11 +159,10 @@ R_Exchange_data(GIO_File           fh,
                 MPI_Offset        *buf_idx)        /* IN/OUT: [nprocs] */
 {
     char **recv_buf = NULL;
-    int i, nprocs, myrank, nrecvs, nsends;
+    int i, err, nprocs, myrank, nrecvs, nsends;
     MPI_Offset recved_bytes;
     MPI_Offset *recv_size;
     MPI_Request *reqs;
-    MPI_Datatype send_type;
     MPI_Status *sts;
 
 #if GIO_PROFILING_MODE == 1
@@ -194,16 +193,26 @@ R_Exchange_data(GIO_File           fh,
     nrecvs = 0;
     if (fh->bview.npairs <= 1) {
         for (i=0; i<nprocs; i++) {
-            if (recv_size[i]) {
+            if (recv_size[i] == 0) continue;
+
+            if (recv_size[i] > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-                MPI_Irecv_c((char*)buf + buf_idx[i], recv_size[i], MPI_BYTE, i,
-                            0, fh->comm, &reqs[nrecvs++]);
+                err = MPI_Irecv_c((char*)buf + buf_idx[i], recv_size[i],
+                                  MPI_BYTE, i, 0, fh->comm, &reqs[nrecvs++]);
+                err = GIOI_error_mpi(err, "MPI_Irecv_c");
 #else
-                MPI_Irecv((char*)buf + buf_idx[i], recv_size[i], MPI_BYTE, i,
-                           0, fh->comm, &reqs[nrecvs++]);
+                err = GIO_EINTOVERFLOW;
 #endif
-                buf_idx[i] += recv_size[i];
             }
+            else {
+                int nelems = (int)recv_size[i];
+                err = MPI_Irecv((char*)buf + buf_idx[i], nelems, MPI_BYTE, i,
+                                0, fh->comm, &reqs[nrecvs++]);
+                err = GIOI_error_mpi(err, "MPI_Irecv");
+            }
+            if (err != GIO_NOERR) return err;
+
+            buf_idx[i] += recv_size[i];
         }
     } else {
         size_t memLen = 0;
@@ -218,15 +227,24 @@ R_Exchange_data(GIO_File           fh,
 
         /* post receives */
         for (i=0; i<nprocs; i++) {
-            if (recv_size[i]) {
+            if (recv_size[i] == 0) continue;
+
+            if (recv_size[i] > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-                MPI_Irecv_c(recv_buf[i], recv_size[i], MPI_BYTE, i,
-                            0, fh->comm, &reqs[nrecvs++]);
+                err = MPI_Irecv_c(recv_buf[i], recv_size[i], MPI_BYTE, i,
+                                  0, fh->comm, &reqs[nrecvs++]);
+                err = GIOI_error_mpi(err, "MPI_Irecv_c");
 #else
-                MPI_Irecv(recv_buf[i], recv_size[i], MPI_BYTE, i,
-                            0, fh->comm, &reqs[nrecvs++]);
+                err = GIO_EINTOVERFLOW;
 #endif
             }
+            else {
+                int nelems = (int)recv_size[i];
+                err = MPI_Irecv(recv_buf[i], nelems, MPI_BYTE, i,
+                                0, fh->comm, &reqs[nrecvs++]);
+                err = GIOI_error_mpi(err, "MPI_Irecv");
+            }
+            if (err != GIO_NOERR) return err;
         }
     }
 
@@ -234,32 +252,30 @@ R_Exchange_data(GIO_File           fh,
     nsends = 0;
     for (i=0; i<nprocs; i++) {
         if (send_size[i]) {
+
             /* take care the last offset-length pair if is a partial send */
             MPI_Offset tmp = 0;
             MPI_Offset k = 0;
+            MPI_Datatype send_type;
+
             if (partial_send[i]) {
                 k = start_pos[i] + count[i] - 1;
-                tmp = others_req[i].lens[k];
-                others_req[i].lens[k] = partial_send[i];
+                tmp = others_req[i].len[k];
+                others_req[i].len[k] = partial_send[i];
             }
-#ifdef HAVE_MPI_LARGE_COUNT
-            MPI_Type_create_hindexed_c(count[i],
-                                       &others_req[i].lens[start_pos[i]],
-                                       &others_req[i].mem_ptrs[start_pos[i]],
-                                       MPI_BYTE, &send_type);
-#else
-            MPI_Type_create_hindexed(count[i],
-                                     &others_req[i].lens[start_pos[i]],
-                                     &others_req[i].mem_ptrs[start_pos[i]],
-                                     MPI_BYTE, &send_type);
-#endif
+
             /* absolute displacement; use MPI_BOTTOM in send */
-            MPI_Type_commit(&send_type);
+            err = GIOI_type_create_hindexed(count[i],
+                                       &others_req[i].ptr[start_pos[i]],
+                                       &others_req[i].len[start_pos[i]],
+                                       &send_type);
+            if (err != GIO_NOERR) return err;
+
             MPI_Isend(MPI_BOTTOM, 1, send_type, i, 0, fh->comm,
                       reqs + nrecvs + nsends);
             MPI_Type_free(&send_type);
             if (partial_send[i])
-                others_req[i].lens[k] = tmp;
+                others_req[i].len[k] = tmp;
             nsends++;
         }
     }
@@ -277,7 +293,7 @@ R_Exchange_data(GIO_File           fh,
 
         for (i=0; i<nrecvs; i++) {
 #ifdef HAVE_MPI_LARGE_COUNT
-            MPI_Offset count_recved;
+            MPI_Count count_recved;
             MPI_Get_count_c(&sts[i], MPI_BYTE, &count_recved);
 #else
             int count_recved;
@@ -353,17 +369,17 @@ Read_and_exch(GIO_File           fh,
     st_loc = end_loc = -1;
     for (i=0; i<nprocs; i++) {
         /* Some processes may not have data for this aggregator */
-        if (others_req[i].count) {
-            st_loc = others_req[i].offsets[0];
-            end_loc = others_req[i].offsets[0];
+        if (others_req[i].num) {
+            st_loc  = others_req[i].off[0];
+            end_loc = others_req[i].off[0];
             break;
         }
     }
     for (; i<nprocs; i++) {
-        for (j=0; j<others_req[i].count; j++) {
-            st_loc = MIN(st_loc, others_req[i].offsets[j]);
-            end_loc = MAX(end_loc, (others_req[i].offsets[j]
-                                  + others_req[i].lens[j] - 1));
+        for (j=0; j<others_req[i].num; j++) {
+            st_loc  = MIN(st_loc, others_req[i].off[j]);
+            end_loc = MAX(end_loc, (others_req[i].off[j]
+                                  + others_req[i].len[j] - 1));
         }
     }
 
@@ -469,12 +485,12 @@ Read_and_exch(GIO_File           fh,
         round_end = rem_off + rem_size;
 
         for (i=0; i<nprocs; i++) {
-            if (others_req[i].count == 0)
+            if (others_req[i].num == 0)
                 continue;
 
             /* This should be only reachable by I/O aggregators only */
-            for (j=curr_offlen_ptr[i]; j<others_req[i].count; j++) {
-                if (others_req[i].offsets[j] + partial_send[i] < round_end) {
+            for (j=curr_offlen_ptr[i]; j<others_req[i].num; j++) {
+                if (others_req[i].off[j] + partial_send[i] < round_end) {
 #if GIO_DEBUG_MODE == 1
                     assert(for_curr_round + rem_size <= cb_buffer_size);
 #endif
@@ -497,11 +513,11 @@ done_read:
 
         for (i=0; i<nprocs; i++) {
             count[i] = send_size[i] = 0;
-            if (others_req[i].count == 0)
+            if (others_req[i].num == 0)
                 continue;
 
             start_pos[i] = curr_offlen_ptr[i];
-            for (j=curr_offlen_ptr[i]; j<others_req[i].count; j++) {
+            for (j=curr_offlen_ptr[i]; j<others_req[i].num; j++) {
                 MPI_Offset addr;
                 MPI_Offset req_off;
                 MPI_Offset req_len, rem_len;
@@ -513,15 +529,15 @@ done_read:
                     /* This request may have been partially satisfied in the
                      * previous round.
                      */
-                    req_off = others_req[i].offsets[j] + partial_send[i];
-                    req_len = others_req[i].lens[j]    - partial_send[i];
+                    req_off = others_req[i].off[j] + partial_send[i];
+                    req_len = others_req[i].len[j] - partial_send[i];
                     partial_send[i] = 0;
                     /* modify the offset-length pair to reflect this change */
-                    others_req[i].offsets[j] = req_off;
-                    others_req[i].lens[j]    = req_len;
+                    others_req[i].off[j] = req_off;
+                    others_req[i].len[j] = req_len;
                 } else {
-                    req_off = others_req[i].offsets[j];
-                    req_len = others_req[i].lens[j];
+                    req_off = others_req[i].off[j];
+                    req_len = others_req[i].len[j];
                 }
 
                 rem_len = real_off + real_size - req_off;
@@ -535,7 +551,7 @@ done_read:
                 assert(req_off - real_off <= cb_buffer_size);
 #endif
                 addr = (char*)read_buf + req_off - (char*)real_off;
-                others_req[i].mem_ptrs[j] = addr;
+                others_req[i].ptr[j] = addr;
                 send_size[i] += MIN(rem_len, req_len);
 
                 if (rem_len < req_len) {
@@ -543,14 +559,14 @@ done_read:
                     /* Overlapped in two consecutive offset-length pairs in
                      * fview should have already been removed in ina_get().
                      */
-                    if (j + 1 < others_req[i].count &&
-                        others_req[i].offsets[j + 1] < real_off + real_size) {
+                    if (j + 1 < others_req[i].num &&
+                        others_req[i].off[j + 1] < real_off + real_size) {
                         /* An overlap is found between pairs j and j+1. This is
                          * the case illustrated in the figure above.
                          */
                         for_next_round = MAX(for_next_round,
                                              real_off + real_size -
-                                             others_req[i].offsets[j + 1]);
+                                             others_req[i].off[j + 1]);
                         /* max because it must cover requests from different
                          * processes
                          */
@@ -570,6 +586,7 @@ done_read:
         r_len = R_Exchange_data(fh, buf, send_size, count, start_pos,
                                 partial_send, recd_from_proc, min_st_off,
                                 fd_size, fd_end, others_req, buf_idx);
+        if (r_len < 0) return r_len; /* negative is an GIO error code */
         total_r_len += r_len;
 
         if (for_next_round) {
@@ -598,6 +615,7 @@ done_read:
         r_len = R_Exchange_data(fh, buf, send_size, count, start_pos,
                                 partial_send, recd_from_proc, min_st_off,
                                 fd_size, fd_end, others_req, buf_idx);
+        if (r_len < 0) return r_len; /* negative is an GIO error code */
         total_r_len += r_len;
     }
 
@@ -830,13 +848,14 @@ double curT = MPI_Wtime();
     r_len = Read_and_exch(fh, buf, others_req, min_st_off, fd_size, fd_end,
                           buf_idx);
     if (r_len > 0) total_r_len += r_len;
+    /* else case r_len is negative, an GIO error code */
 
     /* free all memory allocated for collective I/O */
     if (fd_end != NULL) GIOI_Free(fd_end);
-    GIOI_Free(my_req[0].offsets);
+    GIOI_Free(my_req[0].off);
     GIOI_Free(my_req);
     GIOI_Free(buf_idx);
-    GIOI_Free(others_req[0].offsets);
+    GIOI_Free(others_req[0].off);
     GIOI_Free(others_req);
 
 #if GIO_PROFILING_MODE == 1

@@ -168,11 +168,7 @@ GIOI_Calc_my_req(GIO_File           fh,
     int i, nprocs, aggr;
     MPI_Offset j, l;
     MPI_Offset fd_len, rem_len, curr_idx, off, *off_ptr;
-#ifdef HAVE_MPI_LARGE_COUNT
     MPI_Offset *len_ptr;
-#else
-    int *len_ptr;
-#endif
 
     MPI_Comm_size(fh->comm, &nprocs);
 
@@ -242,27 +238,21 @@ GIOI_Calc_my_req(GIO_File           fh,
         }
     }
 
-#ifdef HAVE_MPI_LARGE_COUNT
     alloc_sz = sizeof(MPI_Offset) * 2;
-    (*my_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
-    (*my_req)[0].lens = (*my_req)[0].offsets + memLen;
-#else
-    alloc_sz = sizeof(MPI_Offset) + sizeof(int);
-    (*my_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
-    (*my_req)[0].lens = (int*) ((*my_req)[0].offsets + memLen);
-#endif
+    (*my_req)[0].off = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
+    (*my_req)[0].len = (*my_req)[0].off + memLen;
 
-    off_ptr = (*my_req)[0].offsets;
-    len_ptr = (*my_req)[0].lens;
+    off_ptr = (*my_req)[0].off;
+    len_ptr = (*my_req)[0].len;
     for (i=0; i<nprocs; i++) {
         if (count_per_aggr[i]) {
-            (*my_req)[i].offsets = off_ptr;
+            (*my_req)[i].off = off_ptr;
             off_ptr += count_per_aggr[i];
-            (*my_req)[i].lens = len_ptr;
+            (*my_req)[i].len = len_ptr;
             len_ptr += count_per_aggr[i];
             (*my_req_naggr)++;
         }
-        (*my_req)[i].count = 0; /* will be incremented in loop j below */
+        (*my_req)[i].num = 0; /* will be incremented in loop j below */
     }
 
     /* now fill in my_req */
@@ -279,7 +269,7 @@ GIOI_Calc_my_req(GIO_File           fh,
         if ((*buf_idx)[aggr] == -1)
             (*buf_idx)[aggr] = (MPI_Offset) curr_idx;
 
-        l = (*my_req)[aggr].count;
+        l = (*my_req)[aggr].num;
         curr_idx += fd_len;
 
         rem_len = fh->fview.len[j] - fd_len;
@@ -288,9 +278,9 @@ GIOI_Calc_my_req(GIO_File           fh,
          * structure contains the offsets and lengths located in that process's
          * FD, and the associated count.
          */
-        (*my_req)[aggr].offsets[l] = off;
-        (*my_req)[aggr].lens[l] = fd_len;
-        (*my_req)[aggr].count++;
+        (*my_req)[aggr].off[l] = off;
+        (*my_req)[aggr].len[l] = fd_len;
+        (*my_req)[aggr].num++;
 
         while (rem_len != 0) {
             off += fd_len;
@@ -303,13 +293,13 @@ GIOI_Calc_my_req(GIO_File           fh,
             if ((*buf_idx)[aggr] == -1)
                 (*buf_idx)[aggr] = (MPI_Offset) curr_idx;
 
-            l = (*my_req)[aggr].count;
+            l = (*my_req)[aggr].num;
             curr_idx += fd_len;
             rem_len -= fd_len;
 
-            (*my_req)[aggr].offsets[l] = off;
-            (*my_req)[aggr].lens[l] = fd_len;
-            (*my_req)[aggr].count++;
+            (*my_req)[aggr].off[l] = off;
+            (*my_req)[aggr].len[l] = fd_len;
+            (*my_req)[aggr].num++;
         }
     }
 }
@@ -322,7 +312,7 @@ GIOI_Calc_my_req(GIO_File           fh,
  * others_req[nprocs] - metadata describing all processes' requests to be
  *      carried out by this aggregator.
  */
-void
+int
 GIOI_Calc_others_req(GIO_File            fh,
                      MPI_Offset          my_req_naggr,
                      const MPI_Offset   *count_per_aggr,/* IN: [nprocs] */
@@ -330,17 +320,12 @@ GIOI_Calc_others_req(GIO_File            fh,
                      GIOI_Access       **others_req)    /* OUT: [nprocs] */
 {
     size_t alloc_sz, memLen;
-    int i, j, nprocs, myrank;
+    int i, j, nprocs, myrank, err;
     MPI_Request *reqs;
     MPI_Offset *off_ptr;
     MPI_Offset others_nprocs, *others_npairs;
-#ifdef HAVE_MPI_LARGE_COUNT
     MPI_Offset *len_ptr;
     MPI_Offset *mem_ptr;
-#else
-    int *len_ptr;
-    MPI_Offset *mem_ptr;
-#endif
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -360,20 +345,14 @@ GIOI_Calc_others_req(GIO_File            fh,
     for (i=0; i<nprocs; i++)
         memLen += others_npairs[i];
 
-#ifdef HAVE_MPI_LARGE_COUNT
     alloc_sz = sizeof(MPI_Offset) * 2 + sizeof(MPI_Offset);
-    (*others_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
-    (*others_req)[0].lens = (*others_req)[0].offsets + memLen;
-    (*others_req)[0].mem_ptrs = (MPI_Offset*) ((*others_req)[0].lens + memLen);
-#else
-    alloc_sz = sizeof(MPI_Offset) + sizeof(int) + sizeof(MPI_Offset);
-    (*others_req)[0].offsets = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
-    (*others_req)[0].lens = (int *) ((*others_req)[0].offsets + memLen);
-    (*others_req)[0].mem_ptrs = (MPI_Offset*) ((*others_req)[0].lens + memLen);
-#endif
-    off_ptr = (*others_req)[0].offsets;
-    len_ptr = (*others_req)[0].lens;
-    mem_ptr = (*others_req)[0].mem_ptrs;
+    (*others_req)[0].off = (MPI_Offset *) GIOI_Malloc(alloc_sz * memLen);
+    (*others_req)[0].len = (*others_req)[0].off + memLen;
+    (*others_req)[0].ptr = (MPI_Offset*) ((*others_req)[0].len + memLen);
+
+    off_ptr = (*others_req)[0].off;
+    len_ptr = (*others_req)[0].len;
+    mem_ptr = (*others_req)[0].ptr;
 
     /* others_nprocs is number of processes whose portions of requests fall
      * into this aggregator's file domain (including self rank)
@@ -381,16 +360,16 @@ GIOI_Calc_others_req(GIO_File            fh,
     others_nprocs = 0;
     for (i=0; i<nprocs; i++) {
         if (others_npairs[i]) {
-            (*others_req)[i].count = others_npairs[i];
-            (*others_req)[i].offsets = off_ptr;
+            (*others_req)[i].num = others_npairs[i];
+            (*others_req)[i].off = off_ptr;
             off_ptr += others_npairs[i];
-            (*others_req)[i].lens = len_ptr;
+            (*others_req)[i].len = len_ptr;
             len_ptr += others_npairs[i];
-            (*others_req)[i].mem_ptrs = mem_ptr;
+            (*others_req)[i].ptr = mem_ptr;
             mem_ptr += others_npairs[i];
             others_nprocs++;
         } else
-            (*others_req)[i].count = 0;
+            (*others_req)[i].num = 0;
     }
 
     /* now send the calculated offsets and lengths to respective processes */
@@ -399,55 +378,73 @@ GIOI_Calc_others_req(GIO_File            fh,
 
     j = 0;
     for (i=0; i<nprocs; i++) {
-        if ((*others_req)[i].count == 0)
-            continue;
+        if ((*others_req)[i].num == 0) continue;
+
         if (i == myrank) {
             /* send to self by using memcpy().
-             * Note (*others_req)[i].count == my_req[i].count
+             * Note (*others_req)[i].num == my_req[i].num
              */
-            memcpy((*others_req)[i].offsets, my_req[i].offsets,
-                   my_req[i].count * sizeof(MPI_Offset));
+            memcpy((*others_req)[i].off, my_req[i].off,
+                   my_req[i].num * sizeof(MPI_Offset));
+            memcpy((*others_req)[i].len, my_req[i].len,
+                   my_req[i].num * sizeof(MPI_Offset));
+            continue;
+        }
+
+        /* i != myrank */
+        if ((*others_req)[i].num > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-            memcpy((*others_req)[i].lens, my_req[i].lens,
-                   my_req[i].count * sizeof(MPI_Offset));
+            err = MPI_Irecv_c((*others_req)[i].off, (*others_req)[i].num,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Irecv_c");
+
+            err = MPI_Irecv_c((*others_req)[i].len, (*others_req)[i].num,
+                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Irecv_c");
 #else
-            memcpy((*others_req)[i].lens, my_req[i].lens,
-                   my_req[i].count * sizeof(int));
+            err = GIO_EINTOVERFLOW;
 #endif
         }
         else {
-#ifdef HAVE_MPI_LARGE_COUNT
-            MPI_Irecv_c((*others_req)[i].offsets, (*others_req)[i].count,
-                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
-            MPI_Irecv_c((*others_req)[i].lens, (*others_req)[i].count,
-                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
-#else
-            /* check overflow 4-byte int */
-            assert((*others_req)[i].count <= 2147483647);
+            int nelems = (int)(*others_req)[i].num;
+            err = MPI_Irecv((*others_req)[i].off, nelems, MPI_OFFSET,
+                            i, i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Irecv");
 
-            MPI_Irecv((*others_req)[i].offsets, (int)(*others_req)[i].count,
-                      MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
-            MPI_Irecv((*others_req)[i].lens, (int)(*others_req)[i].count,
-                      MPI_INT, i, i + myrank, fh->comm, &reqs[j++]);
-#endif
+            err = MPI_Irecv((*others_req)[i].len, nelems, MPI_OFFSET,
+                            i, i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Irecv");
         }
+        if (err != GIO_NOERR) return err;
     }
 
     for (i=0; i<nprocs; i++) {
-        if (my_req[i].count && i != myrank) {
+        if (my_req[i].num == 0 || i == myrank) continue;
+
+        if (my_req[i].num > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-            MPI_Isend_c(my_req[i].offsets, my_req[i].count,
-                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
-            MPI_Isend_c(my_req[i].lens, my_req[i].count,
-                        MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
+            err = MPI_Isend_c(my_req[i].off, my_req[i].num, MPI_OFFSET, i,
+                              i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Isend_c");
+
+            err = MPI_Isend_c(my_req[i].len, my_req[i].num, MPI_OFFSET, i,
+                              i + myrank, fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Isend_c");
 #else
-            assert(my_req[i].count <= INT_MAX); /* overflow 4-byte int */
-            MPI_Isend(my_req[i].offsets, (int)my_req[i].count,
-                      MPI_OFFSET, i, i + myrank, fh->comm, &reqs[j++]);
-            MPI_Isend(my_req[i].lens, (int)my_req[i].count,
-                      MPI_INT, i, i + myrank, fh->comm, &reqs[j++]);
+            err = GIO_EINTOVERFLOW;
 #endif
         }
+        else {
+            int nelems = (int)my_req[i].num;
+            err = MPI_Isend(my_req[i].off, nelems, MPI_OFFSET, i, i + myrank,
+                            fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Isend");
+
+            err = MPI_Isend(my_req[i].len, nelems, MPI_OFFSET, i, i + myrank,
+                            fh->comm, &reqs[j++]);
+            err = GIOI_error_mpi(err, "MPI_Isend");
+        }
+        if (err != GIO_NOERR) return err;
     }
 
     if (j) {
@@ -462,5 +459,7 @@ GIOI_Calc_others_req(GIO_File            fh,
 
     GIOI_Free(others_npairs);
     GIOI_Free(reqs);
+
+    return err;
 }
 
