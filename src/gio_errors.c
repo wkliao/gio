@@ -75,6 +75,9 @@ int GIOI_error_mpi(int         mpi_errorcode,
     char errorString[MPI_MAX_ERROR_STRING];
     const char *dump_str = (err_msg == NULL) ? "" : err_msg;
 
+    /* MPI_SUCCESS means no error */
+    if (mpi_errorcode == MPI_SUCCESS) return GIO_NOERR;
+
     /* check for specific error codes understood by GIO */
 
     /* When GIO_NOCLOBBER is used in ioflags(cmode) for open to create,
