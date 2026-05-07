@@ -38,6 +38,18 @@ gio_ufs_wr_coll.c:       MPI_Unpack_c(
 #define DEBUG_RETURN_ERROR(err) return err;
 #endif
 
+#define MPI_ERR(err, api) {                                           \
+    if (err != MPI_SUCCESS) {                                         \
+        int world_rank, errorclass, errorStringLen;                   \
+        char errorString[MPI_MAX_ERROR_STRING];                       \
+        MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);                   \
+        MPI_Error_class(err, &errorclass);                            \
+        MPI_Error_string(err, errorString, &errorStringLen);          \
+        printf("Rank %d: Error in %s at %d: %s() (%s)\n", world_rank, \
+               __func__, __LINE__, api, errorString);                 \
+    }                                                                 \
+}
+
 #ifndef MAX
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
@@ -142,37 +154,34 @@ typedef struct {
 } GIOI_Hints;
 
 typedef struct {
-    MPI_Offset size;       /* total size in bytes, i.e. sum of len[*], 0 means
-                           * zero-sized request. -1 means view has been reset
-                           * (in this case count should be 0).
-                           */
-    MPI_Offset npairs;     /* number of off-len pairs. 0 means the entire file
-                           * is visible. 0 or 1 means buf_view/file_view is
-                           * contiguous. Only when noncontiguous, off and len
-                           * are malloc-ed. Note 0 does not necessarily means
-                           * zero-sized request.
-                           */
-    const MPI_Offset *off; /* [count] byte offsets */
-    const MPI_Offset *len; /* [count] block lengths in bytes */
+    MPI_Offset size;       /* total size in bytes, i.e. sum of len[*]. 0 means
+                            * zero-sized request (in this case npairs == 0)
+                            */
+    MPI_Offset npairs;     /* number of off-len pairs. 0 means zero-sized
+                            * request. > 1 means noncontiguous request. Only
+                            * when npairs > 0, off and len are malloc-ed.
+                            */
+    const MPI_Offset *off; /* [npairs] byte offsets */
+    const MPI_Offset *len; /* [npairs] block lengths in bytes */
     MPI_Offset        idx; /* index of off-len pairs consumed so far */
-    MPI_Offset        rem; /* remaining amount in the pair to be consumed */
+    MPI_Offset        rem; /* remaining amount in pair idx to be consumed */
 } GIOI_View;
 
 typedef struct GIOI_File {
-    MPI_Comm comm;  /* communicator indicating who called open */
-    int  num_NUMAs; /* number of unique NUMA compute nodes */
-    int *NUMA_IDs;  /* [nprocs] node ID of each MPI process */
+    MPI_Comm comm;   /* communicator indicating who called open */
+    int num_NUMAs;   /* number of unique NUMA compute nodes */
+    int *NUMA_IDs;   /* [nprocs] node ID of each MPI process */
 
-    char *filename; /* duplicated internal from user's filename */
+    char *filename;  /* duplicated internal from user's filename */
 
-    int fstype;     /* type of file system: GIOI_FS_LUSTRE, GIOI_FS_UFS */
+    int fstype;      /* type of file system: GIOI_FS_LUSTRE, GIOI_FS_UFS */
 
-    int fd_sys;     /* system file descriptor */
-    int amode;      /* O_CREAT|O_RDWR, O_RDWR, or O_RDONLY */
+    int fd_sys;      /* system file descriptor */
+    int amode;       /* O_CREAT|O_RDWR, O_RDWR, or O_RDONLY */
 
-    int is_open;    /* no_indep_rw, 0: not open yet 1: is open */
+    int is_open;     /* no_indep_rw, 0: not open yet 1: is open */
 
-    int skip_read;  /* whether to skip reads in read-modify-write */
+    int skip_read;   /* whether to skip reads in read-modify-write */
 
     GIOI_View fview; /* file view's flattened offset-length pairs */
     GIOI_View bview; /* buffer view's flattened offset-length pairs */
@@ -188,21 +197,13 @@ typedef struct GIOI_File {
 } GIOI_File;
 
 typedef struct {
-    MPI_Offset *offsets;   /* array of offsets */
-#ifdef HAVE_MPI_LARGE_COUNT
-    MPI_Offset *lens;      /* array of lengths */
-    MPI_Offset  *mem_ptrs; /* array of pointers. used in the read/write phase to
-                           * indicate where the data is stored in memory
-                           * promoted to MPI_Offset so we can construct types
-                           * with _c versions
-                           */
-    MPI_Offset   count;    /* size of above arrays */
-#else
-    int        *lens;
-    MPI_Offset   *mem_ptrs;
-    size_t      count;
-#endif
-    size_t curr; /* index of offsets/lens that is currently being processed */
+    MPI_Offset  num;  /* number of elements in off[], len[], ptr[] */
+    MPI_Offset  cur;  /* index to off[]/len[] currently being processed */
+    MPI_Offset *off;  /* array of offsets */
+    MPI_Offset *len;  /* array of lengths */
+    MPI_Offset *ptr;  /* array of pointers. used in the read/write phase to
+                       * indicate where the data is stored in memory buffer
+                       */
 } GIOI_Access;
 
 #if GIO_PROFILING_MODE == 1
@@ -263,7 +264,15 @@ GIOI_inq_malloc_max_size(size_t *size);
 extern int
 GIOI_inq_malloc_list(void);
 
+extern int
+GIOI_type_create_hindexed(MPI_Offset count, MPI_Offset *off, MPI_Offset *len,
+                MPI_Datatype *newType);
 
+extern int
+GIOI_type_contiguous(MPI_Offset count, MPI_Datatype *newType);
+
+
+/*---- gio_fstype.c ---------------------------------------------------------*/
 extern int
 GIOI_FileSysType(const char *filename);
 
@@ -278,7 +287,7 @@ GIOI_Calc_my_req(GIO_File fh, MPI_Offset min_st_off,
                 MPI_Offset *my_req_naggr, MPI_Offset *count_per_aggr,
                 GIOI_Access **my_req, MPI_Offset **buf_idx);
 
-extern void
+extern int
 GIOI_Calc_others_req(GIO_File fh, MPI_Offset my_req_naggr,
                 const MPI_Offset *count_per_aggr, const GIOI_Access *my_req,
                 GIOI_Access **others_req);

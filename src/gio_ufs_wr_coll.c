@@ -49,7 +49,7 @@
 
 /*----< fill_send_buffer() >-------------------------------------------------*/
 /* This subroutine is only called when buffer view is not contiguous. */
-static void
+static int
 fill_send_buffer(GIO_File          fh,
                  const void       *buf,
                  MPI_Offset        min_st_off,
@@ -60,7 +60,7 @@ fill_send_buffer(GIO_File          fh,
                  char *const      *send_buf,     /* OUT: [nprocs] */
                  MPI_Request      *reqs)         /* OUT: [nprocs] */
 {
-    int i, k, nprocs, myrank, aggr;
+    int i, k, nprocs, myrank, err, aggr;
     MPI_Offset off;
     MPI_Offset buf_indx, buf_rem, size_in_buf, buf_incr, size;
     MPI_Offset len, rem_len, user_buf_idx;
@@ -128,13 +128,23 @@ fill_send_buffer(GIO_File          fh,
                     }
                     if (send_buf_idx[aggr] == send_size[aggr] &&
                         aggr != myrank) {
-#if MPI_VERSION >= 4
-                        MPI_Isend_c(send_buf[aggr], send_size[aggr], MPI_BYTE,
-                                    aggr, 0, fh->comm, &reqs[k++]);
+                        if (send_size[aggr] > INT_MAX) {
+#ifdef HAVE_MPI_LARGE_COUNT
+                            err = MPI_Isend_c(send_buf[aggr], send_size[aggr],
+                                              MPI_BYTE, aggr, 0, fh->comm,
+                                              &reqs[k++]);
+                            err = GIOI_error_mpi(err, "MPI_Isend_c");
 #else
-                        MPI_Isend(send_buf[aggr], send_size[aggr], MPI_BYTE,
-                                  aggr, 0, fh->comm, &reqs[k++]);
+                            err = GIO_EINTOVERFLOW;
 #endif
+                        }
+                        else {
+                            int nelems = (int)send_size[aggr];
+                            err = MPI_Isend(send_buf[aggr], nelems, MPI_BYTE,
+                                            aggr, 0, fh->comm, &reqs[k++]);
+                            err = GIOI_error_mpi(err, "MPI_Isend");
+                        }
+                        if (err != GIO_NOERR) return err;
                     }
                 } else {
                     curr_to[aggr] += len;
@@ -155,6 +165,8 @@ fill_send_buffer(GIO_File          fh,
             sent_to_proc[i] = curr_to[i];
 
     GIOI_Free(curr_to);
+
+    return GIO_NOERR;
 }
 
 /*----< W_Exchange_data() >--------------------------------------------------*/
@@ -218,22 +230,17 @@ W_Exchange_data(GIO_File          fh,
             if (partial_recv[i]) {
                 /* take care if the last off-len pair is a partial recv */
                 MPI_Offset k = start_pos[i] + count[i] - 1;
-                tmp_len[i] = others_req[i].lens[k];
-                others_req[i].lens[k] = partial_recv[i];
+                tmp_len[i] = others_req[i].len[k];
+                others_req[i].len[k] = partial_recv[i];
             }
-#ifdef HAVE_MPI_LARGE_COUNT
-            MPI_Type_create_hindexed_c(count[i],
-                                       &(others_req[i].lens[start_pos[i]]),
-                                       &(others_req[i].mem_ptrs[start_pos[i]]),
-                                       MPI_BYTE, dtype);
-#else
-            MPI_Type_create_hindexed(count[i],
-                                     &(others_req[i].lens[start_pos[i]]),
-                                     &(others_req[i].mem_ptrs[start_pos[i]]),
-                                     MPI_BYTE, dtype);
-#endif
+
             /* absolute displacements; use MPI_BOTTOM in recv */
-            MPI_Type_commit(dtype);
+            err = GIOI_type_create_hindexed(count[i],
+                       &(others_req[i].ptr[start_pos[i]]),
+                       &(others_req[i].len[start_pos[i]]),
+                       dtype);
+            if (err != GIO_NOERR) return err;
+
             if (i != myrank)
                 j++;
         }
@@ -265,7 +272,7 @@ W_Exchange_data(GIO_File          fh,
     /* for partial recvs, restore original lengths */
     for (i=0; i<nprocs; i++)
         if (partial_recv[i])
-            others_req[i].lens[start_pos[i] + count[i] - 1] = tmp_len[i];
+            others_req[i].len[start_pos[i] + count[i] - 1] = tmp_len[i];
 
     GIOI_Free(tmp_len);
 
@@ -326,16 +333,26 @@ W_Exchange_data(GIO_File          fh,
                 j++;
             } else if (fh->bview.npairs <= 1) {
                 /* sen/recv to/from self uses MPI_Unpack() */
+                if (recv_size[i] > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-                MPI_Offset pos=0;
-                MPI_Unpack_c((char*)buf + buf_idx[i], recv_size[i], &pos,
-                             write_buf, 1, self_recv_type, MPI_COMM_SELF);
+                    MPI_Count pos=0;
+                    err = MPI_Unpack_c((char*)buf + buf_idx[i], recv_size[i],
+                                       &pos, write_buf, 1, self_recv_type,
+                                       MPI_COMM_SELF);
+                    err = GIOI_error_mpi(err, "MPI_Unpack_c");
 #else
-                int pos = 0;
-                assert(recv_size[i] < INT_MAX);
-                MPI_Unpack((char*)buf + buf_idx[i], (int)recv_size[i], &pos,
-                           write_buf, 1, self_recv_type, MPI_COMM_SELF);
+                    err = GIO_EINTOVERFLOW;
 #endif
+                }
+                else {
+                    int pos=0, nelems = (int)recv_size[i];
+                    err = MPI_Unpack((char*)buf + buf_idx[i], nelems, &pos,
+                                     write_buf, 1, self_recv_type,
+                                     MPI_COMM_SELF);
+                    err = GIOI_error_mpi(err, "MPI_Unpack_c");
+                }
+                if (err != GIO_NOERR) return err;
+
                 buf_idx[i] += recv_size[i];
             }
         }
@@ -349,21 +366,30 @@ W_Exchange_data(GIO_File          fh,
     if (fh->bview.npairs <= 1) {
         j = 0;
         for (i=0; i<nprocs; i++) {
-            if (send_size[i] && i != myrank) {
+            if (send_size[i] == 0 || i == myrank) continue;
 #if GIO_DEBUG_MODE == 1
-                assert(buf_idx[i] != -1);
+            assert(buf_idx[i] != -1);
 #endif
-#if MPI_VERSION >= 4
-                MPI_Isend_c((char*)buf + buf_idx[i], send_size[i], MPI_BYTE,
-                            i, 0, fh->comm, &send_req[j++]);
+            if (send_size[i] > INT_MAX) {
+#ifdef HAVE_MPI_LARGE_COUNT
+                err = MPI_Isend_c((char*)buf + buf_idx[i], send_size[i],
+                                  MPI_BYTE, i, 0, fh->comm, &send_req[j++]);
+                err = GIOI_error_mpi(err, "MPI_Isend_c");
 #else
-                MPI_Isend((char*)buf + buf_idx[i], send_size[i], MPI_BYTE,
-                          i, 0, fh->comm, &send_req[j++]);
+                err = GIO_EINTOVERFLOW;
 #endif
+            }
+            else {
+                int nelems = (int)send_size[i];
+                err = MPI_Isend((char*)buf + buf_idx[i], nelems, MPI_BYTE,
+                          i, 0, fh->comm, &send_req[j++]);
+                err = GIOI_error_mpi(err, "MPI_Isend");
                 buf_idx[i] += send_size[i];
             }
+            if (err != GIO_NOERR) return err;
         }
-    } else if (nsends) {
+    }
+    else if (nsends) {
         /* buffer view is not contiguous */
         size_t msgLen = 0;
         for (i=0; i<nprocs; i++)
@@ -373,8 +399,9 @@ W_Exchange_data(GIO_File          fh,
         for (i=1; i<nprocs; i++)
             send_buf[i] = send_buf[i - 1] + send_size[i - 1];
 
-        fill_send_buffer(fh, buf, min_st_off, fd_size, fd_end,
-                         send_size, sent_to_proc, send_buf, send_req);
+        err = fill_send_buffer(fh, buf, min_st_off, fd_size, fd_end,
+                               send_size, sent_to_proc, send_buf, send_req);
+        if (err != GIO_NOERR) return err;
 
         /* the send is done in fill_send_buffer() */
     }
@@ -398,34 +425,51 @@ W_Exchange_data(GIO_File          fh,
                 assert(self_recv_type != MPI_DATATYPE_NULL);
 #endif
 
+                if (recv_size[i] > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-                MPI_Offset pos=0;
-                MPI_Unpack_c(ptr, recv_size[i], &pos, write_buf, 1,
-                             self_recv_type, MPI_COMM_SELF);
+                    MPI_Count pos=0;
+                    err = MPI_Unpack_c(ptr, recv_size[i], &pos, write_buf, 1,
+                                       self_recv_type, MPI_COMM_SELF);
+                    err = GIOI_error_mpi(err, "MPI_Unpack_c");
 #else
-                int pos = 0;
-                assert(recv_size[i] < INT_MAX);
-                MPI_Unpack(ptr, (int)recv_size[i], &pos, write_buf, 1,
-                           self_recv_type, MPI_COMM_SELF);
+                    err = GIO_EINTOVERFLOW;
 #endif
+                }
+                else {
+                    int pos=0, nelems=(int)recv_size[i];
+                    err = MPI_Unpack(ptr, nelems, &pos, write_buf, 1,
+                                     self_recv_type, MPI_COMM_SELF);
+                    err = GIOI_error_mpi(err, "MPI_Unpack");
+                }
+                if (err != GIO_NOERR) return err;
+
                 buf_idx[i] += recv_size[i];
             }
         }
-    } else if (fh->bview.npairs > 1 && recv_size[myrank]) {
+    }
+    else if (fh->bview.npairs > 1 && recv_size[myrank]) {
 #if GIO_DEBUG_MODE == 1
         assert(self_recv_type != MPI_DATATYPE_NULL);
 #endif
 
+        if (recv_size[myrank] > INT_MAX) {
 #ifdef HAVE_MPI_LARGE_COUNT
-        MPI_Offset pos=0;
-        MPI_Unpack_c(send_buf[myrank], recv_size[myrank], &pos, write_buf,
-                     1, self_recv_type, MPI_COMM_SELF);
+            MPI_Count pos=0;
+            err = MPI_Unpack_c(send_buf[myrank], recv_size[myrank], &pos,
+                               write_buf, 1, self_recv_type, MPI_COMM_SELF);
+            err = GIOI_error_mpi(err, "MPI_Unpack_c");
 #else
-        int pos = 0;
-        assert(recv_size[myrank] < INT_MAX);
-        MPI_Unpack(send_buf[myrank], (int)recv_size[myrank], &pos, write_buf,
-                   1, self_recv_type, MPI_COMM_SELF);
+            err = GIO_EINTOVERFLOW;
 #endif
+        }
+        else {
+            int pos=0, nelems=(int)recv_size[myrank];
+
+            err = MPI_Unpack(send_buf[myrank], nelems, &pos, write_buf,
+                             1, self_recv_type, MPI_COMM_SELF);
+            err = GIOI_error_mpi(err, "MPI_Unpack");
+        }
+        if (err != GIO_NOERR) return err;
     }
 
     for (i=0; i<num_rtypes; i++)
@@ -502,17 +546,17 @@ Exch_and_write(GIO_File          fh,
     st_loc = end_loc = -1;
     for (i=0; i<nprocs; i++) {
         /* Some processes may not have data for this aggregator */
-        if (others_req[i].count) {
-            st_loc = others_req[i].offsets[0];
-            end_loc = others_req[i].offsets[0];
+        if (others_req[i].num) {
+            st_loc  = others_req[i].off[0];
+            end_loc = others_req[i].off[0];
             break;
         }
     }
     for (i=0; i<nprocs; i++)
-        for (j=0; j<others_req[i].count; j++) {
-            st_loc = MIN(st_loc, others_req[i].offsets[j]);
-            end_loc = MAX(end_loc, (others_req[i].offsets[j]
-                                  + others_req[i].lens[j] - 1));
+        for (j=0; j<others_req[i].num; j++) {
+            st_loc  = MIN(st_loc, others_req[i].off[j]);
+            end_loc = MAX(end_loc, (others_req[i].off[j]
+                                  + others_req[i].len[j] - 1));
         }
 
     /* Calculate the number of rounds of two-phase write, ntimes, each round an
@@ -596,11 +640,11 @@ Exch_and_write(GIO_File          fh,
         round_end = rem_off + rem_size;
 
         for (i=0; i<nprocs; i++) {
-            if (others_req[i].count == 0)
+            if (others_req[i].num == 0)
                 continue;
 
             start_pos[i] = curr_offlen_ptr[i];
-            for (j=curr_offlen_ptr[i]; j<others_req[i].count; j++) {
+            for (j=curr_offlen_ptr[i]; j<others_req[i].num; j++) {
                 MPI_Offset req_off;
                 MPI_Offset req_len;
 
@@ -611,15 +655,15 @@ Exch_and_write(GIO_File          fh,
                     /* this request may have been partially satisfied in the
                      * previous iteration.
                      */
-                    req_off = others_req[i].offsets[j] + partial_recv[i];
-                    req_len = others_req[i].lens[j]    - partial_recv[i];
+                    req_off = others_req[i].off[j] + partial_recv[i];
+                    req_len = others_req[i].len[j] - partial_recv[i];
                     partial_recv[i] = 0;
                     /* modify the off-len pair to reflect this change */
-                    others_req[i].offsets[j] = req_off;
-                    others_req[i].lens[j]    = req_len;
+                    others_req[i].off[j] = req_off;
+                    others_req[i].len[j] = req_len;
                 } else {
-                    req_off = others_req[i].offsets[j];
-                    req_len = others_req[i].lens[j];
+                    req_off = others_req[i].off[j];
+                    req_len = others_req[i].len[j];
                 }
 
                 if (req_off >= round_end)
@@ -630,10 +674,10 @@ Exch_and_write(GIO_File          fh,
                 do_write = 1;
 
                 if (myrank != i)
-                    others_req[i].mem_ptrs[j] = (char*)write_buf + req_off
-                                              - (char*)rem_off;
+                    others_req[i].ptr[j] = (char*)write_buf + req_off
+                                         - (char*)rem_off;
                 else
-                    others_req[i].mem_ptrs[j] = req_off - rem_off;
+                    others_req[i].ptr[j] = req_off - rem_off;
                 recv_size[i] += MIN(round_end - req_off, req_len);
 
                 if (round_end - req_off < req_len) {
@@ -641,8 +685,8 @@ Exch_and_write(GIO_File          fh,
                     /* Overlapped in two consecutive offset-length pairs in
                      * fview should have already been removed in ina_put().
                      */
-                    if (j + 1 < others_req[i].count &&
-                        others_req[i].offsets[j + 1] < round_end) {
+                    if (j + 1 < others_req[i].num &&
+                        others_req[i].off[j + 1] < round_end) {
                         /* An overlap is found between pairs j and j+1. */
                         fprintf(stderr, "Filetype contains overlapping write regions (which is illegal according to the MPI standard\n");
                         assert(0);
@@ -932,10 +976,10 @@ double curT = MPI_Wtime();
 
     /* free all memory allocated for collective I/O */
     if (fd_end != NULL) GIOI_Free(fd_end);
-    GIOI_Free(my_req[0].offsets);
+    GIOI_Free(my_req[0].off);
     GIOI_Free(my_req);
     GIOI_Free(buf_idx);
-    GIOI_Free(others_req[0].offsets);
+    GIOI_Free(others_req[0].off);
     GIOI_Free(others_req);
 
 #if GIO_PROFILING_MODE == 1
