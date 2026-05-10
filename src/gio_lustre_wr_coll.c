@@ -1910,7 +1910,7 @@ over:
     int probe_flag;
     MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, fh->comm, &probe_flag, &probe_st);
     if (probe_flag) {
-        printf("ERROR ++++ MPI_Iprobe rank=%4d is_agg=%d: ---- cb_nodes=%d ntimes=%lld nbufs=%d\n",myrank,fh->is_agg,cb_nodes,ntimes,nbufs);
+        fprintf(stderr,"ERROR ++++ MPI_Iprobe rank=%4d is_agg=%d: ---- cb_nodes=%d ntimes=%lld nbufs=%d\n",myrank,fh->is_agg,cb_nodes,ntimes,nbufs);
         fflush(stdout);
     }
 #endif

@@ -61,7 +61,7 @@ int GIOI_error_posix(char *err_msg)  /* extra error message */
     /* other errors that currently have no corresponding GIO error codes */
     if (err_msg == NULL) err_msg = "";
 
-    printf("IO error (%s) : %s\n", err_msg, errorString);
+    fprintf(stderr,"IO error (%s) : %s\n", err_msg, errorString);
 
     return GIO_EFILE; /* other unknown file I/O error */
 }
@@ -123,9 +123,9 @@ int GIOI_error_mpi(int         mpi_errorcode,
     /* report the world rank */
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    printf("rank %d: MPI error (%s) : %s\n", rank, dump_str, errorString);
+    fprintf(stderr,"rank %d: MPI error (%s) : %s\n", rank, dump_str, errorString);
 #else
-    printf("MPI error (%s) : %s\n", dump_str, errorString);
+    fprintf(stderr,"MPI error (%s) : %s\n", dump_str, errorString);
 #endif
 
     return GIO_EFILE; /* other unknown file I/O error */

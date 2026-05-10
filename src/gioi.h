@@ -30,7 +30,7 @@ gio_ufs_wr_coll.c:       MPI_Unpack_c(
         int _rank;                                                    \
         MPI_Comm_rank(MPI_COMM_WORLD, &_rank);                        \
         fprintf(stderr, "Rank %d: %s error at line %d of %s in %s\n", \
-        _rank,GIO_strerrno(err),__LINE__,__func__,__FILE__);          \
+                _rank,GIO_strerrno(err),__LINE__,__func__,__FILE__);  \
     }                                                                 \
     return err;                                                       \
 }
@@ -45,8 +45,8 @@ gio_ufs_wr_coll.c:       MPI_Unpack_c(
         MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);                   \
         MPI_Error_class(err, &errorclass);                            \
         MPI_Error_string(err, errorString, &errorStringLen);          \
-        printf("Rank %d: Error in %s at %d: %s() (%s)\n", world_rank, \
-               __func__, __LINE__, api, errorString);                 \
+        fprintf(stderr,"Rank %d: Error in %s at %d: %s() (%s)\n",     \
+                world_rank,  __func__, __LINE__, api, errorString);   \
     }                                                                 \
 }
 
