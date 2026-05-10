@@ -160,7 +160,7 @@ int get_total_avail_osts(const char *filename)
     dd = open(dname, O_RDONLY, 0600);
     if (dd < 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) failed to open folder %s (%s)\n",
+        fprintf(stderr,"Error at %s (%d) failed to open folder %s (%s)\n",
                __FILE__,__LINE__, dname, strerror(errno));
 #endif
         goto err_out;
@@ -170,7 +170,7 @@ int get_total_avail_osts(const char *filename)
     layout = llapi_layout_get_by_fd(dd, LLAPI_LAYOUT_GET_COPY);
     if (layout == NULL) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_get_by_fd() failed (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_get_by_fd() failed (%s)\n",
                __FILE__, __LINE__,strerror(errno));
 #endif
         goto err_out;
@@ -180,7 +180,7 @@ int get_total_avail_osts(const char *filename)
     err = llapi_layout_pool_name_get(layout, pool_name, sizeof(pool_name)-1);
     if (err < 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_pool_name_get() failed (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_pool_name_get() failed (%s)\n",
                __FILE__, __LINE__,strerror(errno));
 #endif
         goto err_out;
@@ -204,7 +204,7 @@ int get_total_avail_osts(const char *filename)
     err = llapi_getname(dname, fsname, 63);
     if (err < 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_getname() failed (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_getname() failed (%s)\n",
                __FILE__, __LINE__,strerror(errno));
 #endif
         goto err_out;
@@ -253,7 +253,7 @@ int get_total_avail_osts(const char *filename)
         printf("------------------------------------\n\n");
     } else {
         printf("%s at %d: EOVERFLOW=%d EINVAL=%d\n",__func__,__LINE__,EOVERFLOW,EINVAL);
-        printf("%s at %d: No members found for pool '%s' or an error occurred num_members=%d (%s).\n",
+        fprintf(stderr,"%s at %d: No members found for pool '%s' or an error occurred num_members=%d (%s).\n",
                __func__,__LINE__,pool_name, num_members, strerror(errno));
     }
 #endif
@@ -287,7 +287,7 @@ int sort_ost_ids(struct llapi_layout *layout,
     for (i=0; i<stripe_count; i++) {
         if (llapi_layout_ost_index_get(layout, i, &osts[i]) != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-            printf("Error at %s (%d) llapi_layout_ost_index_get(%lu) (%s)\n",
+            fprintf(stderr,"Error at %s (%d) llapi_layout_ost_index_get(%lu) (%s)\n",
                    __FILE__,__LINE__,i,strerror(errno));
 #endif
             return stripe_count;
@@ -330,7 +330,7 @@ uint64_t get_striping(int         fd,
     layout = llapi_layout_get_by_fd(fd, LLAPI_LAYOUT_GET_COPY);
     if (layout == NULL) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_get_by_fd() failed\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_get_by_fd() failed\n",
                 __FILE__, __LINE__);
 #endif
         goto err_out;
@@ -340,7 +340,7 @@ uint64_t get_striping(int         fd,
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
         snprintf(int_str, 32, "%lu", *pattern);
-        printf("Error at %s (%d) llapi_layout_pattern_get() failed to get pattern %s\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_pattern_get() failed to get pattern %s\n",
                 __FILE__, __LINE__, PATTERN_STR(*pattern, int_str));
 #endif
         goto err_out;
@@ -351,7 +351,7 @@ uint64_t get_striping(int         fd,
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
         snprintf(int_str, 32, "%lu", *stripe_count);
-        printf("Error at %s (%d) llapi_layout_stripe_count_get() failed to get stripe count %s\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_count_get() failed to get stripe count %s\n",
             __FILE__, __LINE__, PATTERN_STR(*stripe_count, int_str));
 #endif
         goto err_out;
@@ -362,7 +362,7 @@ uint64_t get_striping(int         fd,
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
         snprintf(int_str, 32, "%lu", *stripe_size);
-        printf("Error at %s (%d) llapi_layout_stripe_size_get() failed to get stripe size %s\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_size_get() failed to get stripe size %s\n",
             __FILE__,__LINE__, PATTERN_STR(*stripe_size, int_str));
 #endif
         goto err_out;
@@ -398,7 +398,7 @@ uint64_t get_striping(int         fd,
         if (!S_ISREG(path_stat.st_mode) && /* not a regular file */
             !S_ISDIR(path_stat.st_mode)) { /* not a folder */
 #ifdef GIOI_LUSTRE_DEBUG
-            printf("Error at %s (%d) calling fstat() file %s (neither a regular file nor a folder)\n", \
+            fprintf(stderr,"Error at %s (%d) calling fstat() file %s (neither a regular file nor a folder)\n", \
                     __FILE__, __LINE__, path);
 #endif
             goto err_out;
@@ -435,7 +435,7 @@ int set_striping(const char *path,
     struct llapi_layout *layout = llapi_layout_alloc();
     if (layout == NULL) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_alloc() failed (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_alloc() failed (%s)\n",
                __FILE__, __LINE__, strerror(errno));
 #endif
         goto err_out;
@@ -448,7 +448,7 @@ int set_striping(const char *path,
     err = llapi_layout_stripe_count_set(layout, stripe_count);
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_stripe_count_set() failed set stripe count %lu (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_count_set() failed set stripe count %lu (%s)\n",
                __FILE__, __LINE__, stripe_count, strerror(errno));
 #endif
         goto err_out;
@@ -457,7 +457,7 @@ int set_striping(const char *path,
     err = llapi_layout_stripe_size_set(layout, stripe_size);
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_stripe_size_set() failed to set stripe size %lu (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_size_set() failed to set stripe size %lu (%s)\n",
                __FILE__, __LINE__, stripe_size, strerror(errno));
 #endif
         goto err_out;
@@ -472,7 +472,7 @@ int set_striping(const char *path,
             err = llapi_layout_ost_index_set(layout, i, ost_id);
             if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-                printf("Error at %s (%d) llapi_layout_ost_index_set() failed to set OST index %lu to %lu (%s)\n",
+                fprintf(stderr,"Error at %s (%d) llapi_layout_ost_index_set() failed to set OST index %lu to %lu (%s)\n",
                        __FILE__, __LINE__, i, ost_id, strerror(errno));
 #endif
                 goto err_out;
@@ -487,7 +487,7 @@ int set_striping(const char *path,
         err = llapi_layout_ost_index_set(layout, 0, start_iodevice);
         if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-            printf("Error at %s (%d) llapi_layout_ost_index_set() failed to set start iodevice %lu (%s)\n",
+            fprintf(stderr,"Error at %s (%d) llapi_layout_ost_index_set() failed to set start iodevice %lu (%s)\n",
                    __FILE__, __LINE__, start_iodevice, strerror(errno));
 #endif
             goto err_out;
@@ -499,7 +499,7 @@ int set_striping(const char *path,
 #ifdef GIOI_LUSTRE_DEBUG
         char int_str[32];
         snprintf(int_str, 32, "%lu", pattern);
-        printf("Error at %s (%d) llapi_layout_pattern_set() failed to set pattern %s (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_pattern_set() failed to set pattern %s (%s)\n",
                __FILE__, __LINE__, PATTERN_STR(pattern, int_str), strerror(errno));
 #endif
         goto err_out;
@@ -509,7 +509,7 @@ int set_striping(const char *path,
     fd = llapi_layout_file_create(path, O_CREAT|O_RDWR, GIOI_PERM, layout);
     if (fd < 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_file_create() failed (%s)\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_file_create() failed (%s)\n",
                __FILE__, __LINE__, strerror(errno));
 #endif
         goto err_out;
@@ -520,7 +520,7 @@ err_out:
 
 #ifdef GIOI_LUSTRE_DEBUG
     if (fd < 0)
-        printf("Error at %s (%d) failed to create file %s with desired file striping. GIO now tries to inherit it from the parent folder.\n",
+        fprintf(stderr,"Error at %s (%d) failed to create file %s with desired file striping. GIO now tries to inherit it from the parent folder.\n",
                 __FILE__,__LINE__, path);
 #endif
 
@@ -1320,7 +1320,7 @@ int GIOI_Lustre_open_on_demand(GIO_File fh)
     layout = llapi_layout_get_by_fd(fh->fd_sys, LLAPI_LAYOUT_GET_COPY);
     if (layout == NULL) {
 #ifdef GIOI_LUSTRE_DEBUG
-        printf("Error at %s (%d) llapi_layout_get_by_fd() failed\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_get_by_fd() failed\n",
                 __FILE__, __LINE__);
 #endif
         return GIOI_error_posix("llapi_layout_get_by_fd");
@@ -1331,7 +1331,7 @@ int GIOI_Lustre_open_on_demand(GIO_File fh)
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
         snprintf(int_str, 32, "%lu", pattern);
-        printf("Error at %s (%d) llapi_layout_pattern_get() failed to get pattern %s\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_pattern_get() failed to get pattern %s\n",
                 __FILE__, __LINE__, PATTERN_STR(pattern, int_str));
 #endif
         return GIOI_error_posix("llapi_layout_pattern_get");
@@ -1342,7 +1342,7 @@ int GIOI_Lustre_open_on_demand(GIO_File fh)
     if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
         snprintf(int_str, 32, "%lu", stripe_size);
-        printf("Error at %s (%d) llapi_layout_stripe_size_get() failed to get stripe size %s\n",
+        fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_size_get() failed to get stripe size %s\n",
             __FILE__,__LINE__, PATTERN_STR(stripe_size, int_str));
 #endif
         return GIOI_error_posix("llapi_layout_stripe_size_get");
