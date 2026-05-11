@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h> /* strchr() */
+#include <limits.h> /* INT_MAX */
 
 #include "gioi.h"
 
@@ -251,7 +252,16 @@ int GIOI_sanity_check(const char       *func_name,
                     __func__, __LINE__);
             return GIO_EINVAL;
         }
+        fh->fview.off = file_offs;
+        fh->fview.len = file_lens;
     }
+    else if (file_npairs == 0) {
+        fh->fview.off = NULL;
+        fh->fview.len = NULL;
+    }
+    else /* file_npairs < 0 */
+        return GIO_EINVAL;
+
     if (buf_npairs > 0) {
         if (buf_offs == NULL) {
             fprintf(stderr, "Error in %s at %d: NULL buffer offsets\n",
@@ -263,16 +273,20 @@ int GIOI_sanity_check(const char       *func_name,
                     __func__, __LINE__);
             return GIO_EINVAL;
         }
+        fh->bview.off = buf_offs;
+        fh->bview.len = buf_lens;
     }
+    else if (buf_npairs == 0) {
+        fh->bview.off = NULL;
+        fh->bview.len = NULL;
+    }
+    else /* buf_npairs < 0 */
+        return GIO_EINVAL;
 
     fh->fview.npairs = file_npairs;
-    fh->fview.off    = file_offs;
-    fh->fview.len    = file_lens;
     fh->fview.idx    = 0;
 
     fh->bview.npairs = buf_npairs;
-    fh->bview.off    = buf_offs;
-    fh->bview.len    = buf_lens;
     fh->bview.idx    = 0;
 
     /* calculate total request amount */
@@ -295,7 +309,7 @@ int GIOI_sanity_check(const char       *func_name,
         fh->bview.size += fh->bview.len[j];
 
     fh->fview.rem = (file_npairs > 1) ? file_lens[0] : fh->fview.size;
-    fh->bview.rem = (buf_npairs > 1) ? buf_lens[0] : fh->bview.size;
+    fh->bview.rem = ( buf_npairs > 1) ?  buf_lens[0] : fh->bview.size;
 
     /* Negative request amounts are not allowed */
     if (fh->fview.size < 0 || fh->bview.size < 0)
