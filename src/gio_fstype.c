@@ -58,7 +58,7 @@
 #endif /* !(S_ISLNK) */
 
 /* Returns a string, the parent directory of a given filename.
- * The caller should free the memory located returned by this subroutine.
+ * The caller should free the memory allocated returned by this subroutine.
  */
 static
 void parentdir(const char *filename, char **dirnamep)

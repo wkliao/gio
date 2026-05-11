@@ -49,8 +49,8 @@
     snprintf(int_str, 16, "%d", fh->hints->lustre_num_osts);                \
     MPI_Info_set(fh->info, "lustre_num_osts", int_str);                     \
                                                                             \
-    snprintf(int_str, 16, "%d", fh->hints->overstriping_ratio);      \
-    MPI_Info_set(fh->info, "overstriping_ratio", int_str);           \
+    snprintf(int_str, 16, "%d", fh->hints->overstriping_ratio);             \
+    MPI_Info_set(fh->info, "overstriping_ratio", int_str);                  \
                                                                             \
     /* collective buffer size must be at least file striping size */        \
     if (fh->hints->cb_buffer_size < fh->hints->striping_unit) {             \
@@ -76,18 +76,18 @@
 #define GIOI_LUSTRE_DEBUG
 // #define GIOI_LUSTRE_DEBUG_VERBOSE
 
-#define PATTERN_STR(pattern, int_str) ( \
-    (pattern == LLAPI_LAYOUT_DEFAULT)      ? "LLAPI_LAYOUT_DEFAULT" : \
-    (pattern == LLAPI_LAYOUT_RAID0)        ? "LLAPI_LAYOUT_RAID0" : \
-    (pattern == LLAPI_LAYOUT_WIDE)         ? "LLAPI_LAYOUT_WIDE" : \
-    (pattern == LLAPI_LAYOUT_MDT)          ? "LLAPI_LAYOUT_MDT" : \
-    (pattern == LLAPI_LAYOUT_OVERSTRIPING) ? "LLAPI_LAYOUT_OVERSTRIPING" : \
-    (pattern == LLAPI_LAYOUT_SPECIFIC)     ? "LLAPI_LAYOUT_SPECIFIC" : \
+#define PATTERN_STR(pattern, int_str) (                                     \
+    (pattern == LLAPI_LAYOUT_DEFAULT)      ? "LLAPI_LAYOUT_DEFAULT" :       \
+    (pattern == LLAPI_LAYOUT_RAID0)        ? "LLAPI_LAYOUT_RAID0" :         \
+    (pattern == LLAPI_LAYOUT_WIDE)         ? "LLAPI_LAYOUT_WIDE" :          \
+    (pattern == LLAPI_LAYOUT_MDT)          ? "LLAPI_LAYOUT_MDT" :           \
+    (pattern == LLAPI_LAYOUT_OVERSTRIPING) ? "LLAPI_LAYOUT_OVERSTRIPING" :  \
+    (pattern == LLAPI_LAYOUT_SPECIFIC)     ? "LLAPI_LAYOUT_SPECIFIC" :      \
     int_str)
 
-#define PRINT_LAYOUT(val) { \
-    char int_str[32]; \
-    snprintf(int_str, 32, "%lu", val); \
+#define PRINT_LAYOUT(val) {                                                 \
+    char int_str[32];                                                       \
+    snprintf(int_str, 32, "%lu", val);                                      \
     printf("\t%-14s = %-25s (0x%lx)\n",#val,PATTERN_STR(val, int_str),val); \
 }
 
@@ -853,9 +853,9 @@ int Lustre_set_cb_node_list(GIO_File fh)
         GIOI_Free(naggr_per_node);
     }
 
-    /* TODO: we can keep these two arrays in case for dynamic construction
-     * of fh->hints->aggr_ranks[], such as in group-cyclic file domain
-     * assignment method, used in each collective write call.
+    /* TODO: we can keep these two arrays in case for dynamic construction of
+     * fh->hints->aggr_ranks[], such as in group-cyclic file domain assignment
+     * method, used in each collective write call.
      */
     GIOI_Free(nprocs_per_node);
     GIOI_Free(ranks_per_node[0]);
@@ -1220,10 +1220,8 @@ GIOI_Lustre_open(GIO_File fh)
     stripe_size = LLAPI_LAYOUT_DEFAULT;
     start_iodevice = LLAPI_LAYOUT_DEFAULT;
 
-    numOSTs = get_striping(fh->fd_sys, fh->filename, &pattern,
-                                       &stripe_count,
-                                       &stripe_size,
-                                       &start_iodevice);
+    numOSTs = get_striping(fh->fd_sys, fh->filename, &pattern, &stripe_count,
+                           &stripe_size, &start_iodevice);
 #elif defined(MIMIC_LUSTRE)
     char *env_str  = getenv("MIMIC_STRIPE_SIZE");
     stripe_size    = (env_str != NULL) ? atoi(env_str) : STRIPE_SIZE;
@@ -1247,10 +1245,10 @@ err_out:
         return err;
     }
 
-    fh->hints->striping_unit   = stripin_info[1];
-    fh->hints->striping_factor = stripin_info[2];
-    fh->hints->start_iodevice  = stripin_info[3];
-    fh->hints->lustre_num_osts = stripin_info[4];
+    fh->hints->striping_unit      = stripin_info[1];
+    fh->hints->striping_factor    = stripin_info[2];
+    fh->hints->start_iodevice     = stripin_info[3];
+    fh->hints->lustre_num_osts    = stripin_info[4];
     fh->hints->overstriping_ratio = stripin_info[2] / stripin_info[4];
 
     SET_INFO(fh);
