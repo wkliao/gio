@@ -95,9 +95,9 @@ err_out:
 }
 
 /*----< GIOI_UFS_write_indep() >---------------------------------------------*/
-/* This subroutine implements independent write. It consists of two major code
- * segments. The first one is for when data sieving is disabled and the second
- * one enabled.
+/* This subroutine implements independent file write. It consists of two major
+ * code segments. The first one is for when data sieving is disabled and the
+ * second one enabled.
  *
  * Note in GIO, the file view and buffer view are never used for more than
  * one round, which greatly simplifies the implementation of this subroutine.
@@ -108,8 +108,8 @@ GIOI_UFS_write_indep(GIO_File    fh,
 {
     char *ptr, *cpy_ptr, *tmp_buf=NULL;
     MPI_Offset i, j, k, ntimes;
-    MPI_Offset lock_off, file_off;
-    MPI_Offset lock_len, len, total_len=0, tmp_buf_size, file_rem, buf_rem;
+    MPI_Offset file_off, lock_off, lock_len, len, total_len=0;
+    MPI_Offset tmp_buf_size, file_rem, buf_rem;
 
 #if GIO_DEBUG_MODE == 1
     /* User I/O hints should have been checked already. */
@@ -124,10 +124,9 @@ GIOI_UFS_write_indep(GIO_File    fh,
 #endif
 
     if (fh->fview.npairs <= 1 && fh->bview.npairs <= 1) {
-        /* Both buffer and fileview are contiguous. */
-        ptr = (char*)buf + fh->bview.off[0];
-        return GIOI_UFS_write_contig(fh, ptr, fh->bview.size,
-                                      fh->fview.off[0], 0);
+        /* Both buffer and file views are contiguous. */
+        return GIOI_UFS_write_contig(fh, (char*)buf + fh->bview.off[0],
+                                     fh->bview.size, fh->fview.off[0], 0);
     }
 
     lock_off = fh->fview.off[0];
@@ -149,8 +148,7 @@ GIOI_UFS_write_indep(GIO_File    fh,
      * buffer is non-contiguous and fview is contiguous, i.e. by reducing
      * the number of file writes.
      */
-    if (fh->hints->ds_write == GIOI_HINT_DISABLE ||
-        fh->fview.npairs <= 1) {
+    if (fh->hints->ds_write == GIOI_HINT_DISABLE || fh->fview.npairs <= 1) {
 
         if (fh->bview.npairs <= 1) { /* use buf directly to write */
             tmp_buf = (char*)buf + fh->bview.off[0];
@@ -237,8 +235,7 @@ GIOI_UFS_write_indep(GIO_File    fh,
     }
     else {
         /* fview is noncontiguous and data sieving is not disabled */
-        MPI_Offset disp, first_stripe, last_stripe;
-        MPI_Offset lock_rem, cpy_len;
+        MPI_Offset disp, first_stripe, last_stripe, lock_rem, cpy_len;
 
         /* allocate read-modify-write buffer */
         tmp_buf_size = MIN(lock_len, fh->hints->striping_unit);
@@ -272,7 +269,7 @@ GIOI_UFS_write_indep(GIO_File    fh,
         }
 #endif
 
-        /* initialize loop local variables with the 1st pair of fview and
+        /* initialize loop i's local variables with the 1st pair of fview and
          * bview
          */
         file_off = fh->fview.off[0];
@@ -374,10 +371,10 @@ GIOI_UFS_write_indep(GIO_File    fh,
 
                     j++;
                     assert(j < fh->fview.npairs);
-                    /* Note j should never become fview.npairs, as the
-                     * above check of if (k == bview.npairs) should
-                     * short-circuit the while loop. This is because GIO
-                     * requires fview.size == bview.size.
+                    /* Note j should never become fview.npairs, as the above
+                     * check of if (k == bview.npairs) should short-circuit
+                     * the while loop. This is because GIO requires
+                     * fview.size == bview.size.
                      */
 
                     file_rem = fh->fview.len[j];

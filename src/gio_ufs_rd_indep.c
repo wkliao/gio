@@ -86,7 +86,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
     /* User I/O hints should have been checked already. */
     assert(fh->hints->ind_rd_buffer_size > 0);
 
-    /* zero-sized requests should have returned in GIO_read_indep() */
+    /* zero-sized requests should have already returned in GIO_read_indep() */
     assert(fh->bview.npairs > 0);
     assert(fh->bview.size > 0);
 
@@ -95,10 +95,9 @@ GIOI_UFS_read_indep(GIO_File  fh,
 #endif
 
     if (fh->fview.npairs <= 1 && fh->bview.npairs <= 1) {
-        /* Both buffer and fileview are contiguous. */
+        /* Both buffer and file views are contiguous. */
         ptr = (char*)buf + fh->bview.off[0];
-        return GIOI_UFS_read_contig(fh, ptr, fh->bview.size,
-                                     fh->fview.off[0]);
+        return GIOI_UFS_read_contig(fh, ptr, fh->bview.size, fh->fview.off[0]);
     }
 
     lock_off = fh->fview.off[0];
@@ -120,8 +119,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
      * buffer is non-contiguous and fview is contiguous, i.e. by reducing
      * the number of file reads.
      */
-    if (fh->hints->ds_read == GIOI_HINT_DISABLE ||
-        fh->fview.npairs <= 1) {
+    if (fh->hints->ds_read == GIOI_HINT_DISABLE || fh->fview.npairs <= 1) {
 
         if (fh->bview.npairs <= 1) { /* directly read to buf */
             tmp_buf = (char*)buf + fh->bview.off[0];
@@ -129,7 +127,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
             ntimes = 1;
             tmp_buf_size = fh->bview.size;
         }
-        else { /* buf is noncontiguous */
+        else { /* buf is noncontiguous, allocate tmp_buf and read to it */
             tmp_buf_size = MIN(fh->bview.size, fh->hints->ind_rd_buffer_size);
             tmp_buf = (char*) GIOI_Malloc(tmp_buf_size);
             buf_rem = fh->bview.len[0];
@@ -149,12 +147,12 @@ GIOI_UFS_read_indep(GIO_File  fh,
         for (i=0; i<ntimes; i++) { /* perform read in ntimes rounds */
             MPI_Offset req_len, tmp_buf_rem;
 
-            /* using tmp_buf to read from the file */
+            /* read from file into tmp_buf */
             tmp_buf_rem = tmp_buf_size;
             ptr = tmp_buf;
             while (j < fh->fview.npairs) {
                 req_len = MIN(tmp_buf_rem, file_rem);
-                /* read from offset file_off of length req_len */
+                /* read from file offset file_off of length req_len */
                 len = GIOI_UFS_read_contig(fh, ptr, req_len, file_off);
                 if (len < 0) return len;
                 total_len += len;
@@ -207,7 +205,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
         if (tmp_buf != buf) GIOI_Free(tmp_buf);
     }
     else {
-        /* fview is noncontiguous and data sieving is not disabled */
+        /* file view is noncontiguous and data sieving is not disabled */
         MPI_Offset disp, first_stripe, last_stripe;
         MPI_Offset lock_rem, cpy_len;
 
@@ -243,7 +241,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
         }
 #endif
 
-        /* initialize loop local variables with the 1st pair of fview and
+        /* initialize loop i's local variables with the 1st pair of fview and
          * bview
          */
         file_off = fh->fview.off[0];
@@ -259,8 +257,7 @@ GIOI_UFS_read_indep(GIO_File  fh,
         for (i=0; i<ntimes; i++) { /* perform read in ntimes rounds */
             MPI_Offset req_len, tmp_buf_rem, gap;
 
-            /* adjust tmp_buf_size to achieve striping_unit aligned file
-             * access
+            /* adjust tmp_buf_size so file access is aligned with striping_unit
              */
             tmp_buf_size = fh->hints->striping_unit
                          - (file_off % fh->hints->striping_unit);

@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>  /* memcpy() */
-#include <limits.h>  /* LLONG_MAX */
+#include <limits.h>  /* LLONG_MAX, INT_MAX */
 #include <assert.h>
 
 #include "gioi.h"
@@ -61,10 +61,8 @@ fill_send_buffer(GIO_File          fh,
                  MPI_Request      *reqs)         /* OUT: [nprocs] */
 {
     int i, k, nprocs, myrank, err, aggr;
-    MPI_Offset off;
-    MPI_Offset buf_indx, buf_rem, size_in_buf, buf_incr, size;
-    MPI_Offset len, rem_len, user_buf_idx;
-    MPI_Offset j, *curr_to, *done_to, *send_buf_idx;
+    MPI_Offset j, off, len, buf_indx, buf_rem, size_in_buf, buf_incr, size;
+    MPI_Offset rem_len, user_buf_idx, *curr_to, *done_to, *send_buf_idx;
 
     MPI_Comm_size(fh->comm, &nprocs);
     MPI_Comm_rank(fh->comm, &myrank);
@@ -106,9 +104,9 @@ fill_send_buffer(GIO_File          fh,
              * is responsible for.
              */
             aggr = GIOI_Calc_aggregator(fh->hints->striping_unit,
-                                         fh->hints->cb_nodes,
-                                         fh->hints->aggr_ranks, min_st_off,
-                                         fd_size, fd_end, off, &len);
+                                        fh->hints->cb_nodes,
+                                        fh->hints->aggr_ranks, min_st_off,
+                                        fd_size, fd_end, off, &len);
 
             if (send_buf_idx[aggr] < send_size[aggr]) {
                 if (curr_to[aggr] + len > done_to[aggr]) {
@@ -172,8 +170,8 @@ fill_send_buffer(GIO_File          fh,
 /*----< W_Exchange_data() >--------------------------------------------------*/
 static MPI_Offset
 W_Exchange_data(GIO_File          fh,
-                const void       *buf,
-                char             *write_buf,
+                const void       *buf,          /* user buffer */
+                char             *write_buf,    /* collective buffer */
                 const MPI_Offset *recv_size,    /* IN: [nprocs] */
                 MPI_Offset        rem_off,
                 MPI_Offset        rem_size,
@@ -192,8 +190,7 @@ W_Exchange_data(GIO_File          fh,
     int nrecvs, nsends, num_rtypes, nreqs, hole;
     MPI_Request *reqs, *send_req;
     MPI_Datatype *recv_types, self_recv_type=MPI_DATATYPE_NULL;
-    MPI_Offset *send_size, sum, *srt_len=NULL, *tmp_len;
-    MPI_Offset *srt_off=NULL;
+    MPI_Offset *send_size, sum, *srt_len=NULL, *tmp_len, *srt_off=NULL;
 
 #if GIO_PROFILING_MODE == 1
     double curT = MPI_Wtime();
@@ -382,7 +379,7 @@ W_Exchange_data(GIO_File          fh,
             else {
                 int nelems = (int)send_size[i];
                 err = MPI_Isend((char*)buf + buf_idx[i], nelems, MPI_BYTE,
-                          i, 0, fh->comm, &send_req[j++]);
+                                i, 0, fh->comm, &send_req[j++]);
                 err = GIOI_error_mpi(err, "MPI_Isend");
                 buf_idx[i] += send_size[i];
             }
@@ -645,8 +642,7 @@ Exch_and_write(GIO_File          fh,
 
             start_pos[i] = curr_offlen_ptr[i];
             for (j=curr_offlen_ptr[i]; j<others_req[i].num; j++) {
-                MPI_Offset req_off;
-                MPI_Offset req_len;
+                MPI_Offset req_off, req_len;
 
                 /* req_off is the file offset for offset-length pair j minus
                  * what has been satisfied in previous round
