@@ -7,21 +7,40 @@
 ACLOCAL_AMFLAGS = -I m4
 
 if BUILD_AS_SUBPROJECT
-   SUBDIRS = src
-   DIST_SUBDIRS = src
+   SUBDIRS = src test
+   DIST_SUBDIRS = src test
 else
-   SUBDIRS = src utils
-   DIST_SUBDIRS = src utils
+   SUBDIRS = src utils test
+   DIST_SUBDIRS = src utils test
 endif
 
 EXTRA_DIST = INSTALL.md \
              README.md \
              RELEASE_NOTES.md
 
+PTEST_SUBDIRS = test
+
 ptest:
 	@for d in $(PTEST_SUBDIRS) ; do \
 		$(MAKE) $(MFLAGS) -C $$d ptest $$* || exit 1 ; \
 	done
+
+ptests:
+if ! BUILD_AS_SUBPROJECT
+	@for d in $(PTEST_SUBDIRS) ; do \
+		$(MAKE) $(MFLAGS) -C $$d ptests $$* || exit 1 ; \
+	done
+endif
+
+tests-local:
+	@echo '|'
+	@echo '|  All test programs have been successfully built.'
+	@echo '|'
+
+check-local:
+	@echo '|'
+	@echo '|  All sequential test programs have run successfully.'
+	@echo '|'
 
 # Note on DESTDIR. GNU autoconf manual Section 16.4 Installation Names has the
 # following statement. "The second method involves providing the 'DESTDIR'

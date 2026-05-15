@@ -777,6 +777,7 @@ fi
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
+                test/Makefile \
                 $util_files \
 )
 
