@@ -228,6 +228,48 @@ void* GIOI_Malloc_fn(size_t      size,
     return buf;
 }
 
+/*----< GIOI_Malloc_align_fn() >---------------------------------------------*/
+/* This subroutine is GIOI_Malloc_fn() with the aligned memory allocation,
+ * where the rteurned allocation's base address is an exact multiple of
+ * 'alignment'.
+ */
+void* GIOI_Malloc_align_fn(size_t      size,
+                           size_t      alignment,
+                           const int   lineno,
+                           const char *func,
+                           const char *filename)
+{
+    int err;
+    void *buf;
+
+    /* Many C library implementations, particularly those designed to work with
+     * GCC and Clang, limit single malloc allocations to PTRDIFF_MAX - 1 bytes.
+     * ptrdiff_t is a signed integer type used for the difference between two
+     * pointers, and PTRDIFF_MAX is its maximum value. This limitation exists
+     * because some compiler optimizations and internal library operations may
+     * rely on pointer differences being representable within ptrdiff_t.
+     */
+    if (size > PTRDIFF_MAX - 1) {
+        fprintf(stderr, "Error GIOI_Malloc_align() in \"%s\" calling %s at %d: alignment=%zd size %zd\n",
+                filename, func, lineno, alignment, size);
+        return NULL;
+    }
+
+    err = posix_memalign(&buf, alignment, size);
+
+    if (err != 0) {
+        fprintf(stderr, "Error GIOI_Malloc_align() in \"%s\" calling %s at %d: alignment=%zd size %zd (%s)\n",
+                filename, func, lineno, alignment, size, strerror(err));
+        return NULL;
+    }
+
+#ifdef GIOI_MALLOC_TRACE
+    gioi_add_mem_entry(buf, size, lineno, func, filename);
+#endif
+
+    return buf;
+}
+
 
 /*----< GIOI_Strdup_fn() >---------------------------------------------------*/
 /* This subroutine is essentially the same as calling strdup().

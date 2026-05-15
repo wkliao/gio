@@ -158,7 +158,7 @@ GIOI_UFS_write_indep(GIO_File    fh,
         }
         else { /* buf is noncontiguous */
             tmp_buf_size = MIN(fh->bview.size, fh->hints->ind_wr_buffer_size);
-            tmp_buf = (char*) GIOI_Malloc(tmp_buf_size);
+            tmp_buf = (char*) GIOI_Malloc_align(tmp_buf_size, fh->hints->striping_unit);
             buf_rem = fh->bview.len[0];
             ntimes = fh->bview.size / tmp_buf_size;
             if (fh->bview.size % tmp_buf_size)
@@ -239,7 +239,7 @@ GIOI_UFS_write_indep(GIO_File    fh,
 
         /* allocate read-modify-write buffer */
         tmp_buf_size = MIN(lock_len, fh->hints->striping_unit);
-        tmp_buf = (char*) GIOI_Malloc(tmp_buf_size);
+        tmp_buf = (char*) GIOI_Malloc_align(tmp_buf_size, fh->hints->striping_unit);
 
         /* lock_rem is the amount remained to be locked for the entire
          * read-modify-write region.
