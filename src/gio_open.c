@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>     /* memset() */
 #include <fcntl.h>      /* open(), O_CREAT */
 #include <sys/types.h>  /* open(), umask(), fstat() */
 
@@ -246,7 +247,10 @@ GIO_open(MPI_Comm    comm,
 
     /* collective buffer is used only by I/O aggregators only */
     if (fh->is_agg) {
-        fh->io_buf = GIOI_Calloc(1, fh->hints->cb_buffer_size);
+        fh->io_buf = GIOI_Malloc_align(fh->hints->cb_buffer_size,
+                                       fh->hints->striping_unit);
+        memset(fh->io_buf, 0, fh->hints->cb_buffer_size);
+
         if (fh->io_buf == NULL) /* fatal error */
             status = GIO_ENOMEM;
     }

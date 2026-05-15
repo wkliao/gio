@@ -234,6 +234,10 @@ GIOI_Malloc_fn(size_t size, const int lineno, const char *func,
               const char *filename);
 
 extern void*
+GIOI_Malloc_align_fn(size_t size, size_t alignment, const int lineno,
+              const char *func, const char *filename);
+
+extern void*
 GIOI_Strdup_fn(const char *src, const int lineno, const char *func,
               const char *filename);
 
@@ -254,6 +258,7 @@ GIOI_Free_fn(void *ptr, const int lineno, const char *func,
 #define GIOI_Calloc(a,b)  GIOI_Calloc_fn(a,b,__LINE__,__func__,__FILE__)
 #define GIOI_Realloc(a,b) GIOI_Realloc_fn(a,b,__LINE__,__func__,__FILE__)
 #define GIOI_Free(a)      GIOI_Free_fn(a,__LINE__,__func__,__FILE__)
+#define GIOI_Malloc_align(a,b) GIOI_Malloc_align_fn(a,b,__LINE__,__func__,__FILE__)
 
 extern int
 GIOI_inq_malloc_size(size_t *size);
