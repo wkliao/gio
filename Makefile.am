@@ -7,23 +7,26 @@
 ACLOCAL_AMFLAGS = -I m4
 
 if BUILD_AS_SUBPROJECT
-   SUBDIRS = src test
-   DIST_SUBDIRS = src test
+   SUBDIRS = src
+   DIST_SUBDIRS = src
 else
    SUBDIRS = src utils test
    DIST_SUBDIRS = src utils test
 endif
 
-EXTRA_DIST = INSTALL.md \
+EXTRA_DIST = COPYING \
+             INSTALL.md \
              README.md \
              RELEASE_NOTES.md
 
 PTEST_SUBDIRS = test
 
 ptest:
+if ! BUILD_AS_SUBPROJECT
 	@for d in $(PTEST_SUBDIRS) ; do \
 		$(MAKE) $(MFLAGS) -C $$d ptest $$* || exit 1 ; \
 	done
+endif
 
 ptests:
 if ! BUILD_AS_SUBPROJECT
@@ -33,14 +36,18 @@ if ! BUILD_AS_SUBPROJECT
 endif
 
 tests-local:
+if ! BUILD_AS_SUBPROJECT
 	@echo '|'
 	@echo '|  All test programs have been successfully built.'
 	@echo '|'
+endif
 
 check-local:
+if ! BUILD_AS_SUBPROJECT
 	@echo '|'
 	@echo '|  All sequential test programs have run successfully.'
 	@echo '|'
+endif
 
 # Note on DESTDIR. GNU autoconf manual Section 16.4 Installation Names has the
 # following statement. "The second method involves providing the 'DESTDIR'
@@ -107,10 +114,11 @@ distclean-local:
 .PHONY: ptest ptests tests
 
 dist-hook:
+if ! BUILD_AS_SUBPROJECT
 	@if test "x${SUBDIRS}" = "xsrc" ; then \
 		$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md ; \
 		$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md ; \
 		$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md ; \
 	fi
-
+endif
 

@@ -772,12 +772,13 @@ AM_CONDITIONAL(BUILD_AS_SUBPROJECT, [test "x$GIO_SUB_BUILD" = xyes])
 
 if test "x$GIO_SUB_BUILD" != xyes ; then
    util_files="utils/Makefile utils/gio-config utils/packaging/Makefile utils/packaging/gio.pc"
+   test_files="test/Makefile"
 fi
 
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \
                 src/gio.h \
-                test/Makefile \
+                $test_files \
                 $util_files \
 )
 
