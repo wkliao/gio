@@ -8,11 +8,11 @@ ACLOCAL_AMFLAGS = -I m4
 
 if BUILD_AS_SUBPROJECT
    SUBDIRS = src
-   DIST_SUBDIRS = src
 else
    SUBDIRS = src utils test
-   DIST_SUBDIRS = src utils test
 endif
+
+DIST_SUBDIRS = src utils test
 
 EXTRA_DIST = COPYING \
              INSTALL.md \

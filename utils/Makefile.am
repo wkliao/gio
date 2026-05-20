@@ -26,11 +26,13 @@ gio_version$(EXEEXT): gio_version.c
 tests-local: all
 
 dist-hook:
+if ! BUILD_AS_SUBPROJECT
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g" $(distdir)/gio-config.in
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g"           $(distdir)/gio_version.c
 	$(SED_I) -e "s|GIO_RELEASE_VERSION|$(GIO_VERSION)|g"            $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE_FULL|@GIO_RELEASE_DATE_FULL@|g" $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g"           $(distdir)/gio_version.1
+endif
 
 # GNU autoconf allows DESTDIR variable when running 'make install' which will
 # prepend it before all installation names.
