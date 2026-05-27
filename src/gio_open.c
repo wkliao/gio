@@ -164,10 +164,10 @@ GIO_open(MPI_Comm    comm,
     fh->hints = (GIOI_Hints*) GIOI_Calloc(1, sizeof(GIOI_Hints));
     fh->hints->NUMA_ID = -1; /* marked as not set */
 
-    status = GIO_set_info(fh, info);
+    status = GIOI_set_info(fh, info);
     if (status != GIO_NOERR && status != GIO_EMULTIDEFINE_HINTS) {
         /* Inconsistent I/O hints is not a fatal error.
-         * In GIO_set_info(), root's hints overwrite local's.
+         * In GIOI_set_info(), root's hints overwrite local's.
          */
         goto err_out;
     }

@@ -84,9 +84,6 @@ extern int
 GIO_get_size(GIO_File fh, MPI_Offset *size);
 
 extern int
-GIO_set_info(GIO_File fh, MPI_Info  users_info);
-
-extern int
 GIO_get_info(GIO_File fh, MPI_Info *info_used);
 
 extern MPI_Offset

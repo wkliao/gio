@@ -943,7 +943,7 @@ GIOI_Lustre_create(GIO_File fh)
 #ifdef HAVE_LUSTRE
     int overstriping_ratio, str_factor, str_unit, start_iodev;
 
-    /* In a call to GIO_set_info() earlier, hints have been validated to be
+    /* In a call to GIOI_set_info() earlier, hints have been validated to be
      * consistent among all processes.
      */
 

@@ -123,16 +123,16 @@ int hint_consistency_check(GIO_File fh)
     return err;
 }
 
-/*----< GIO_set_info() >-----------------------------------------------------*/
-/* For GIO, a file info object can only be passed to GIO at file create or open
- * call, i.e. I/O hints cannot be changed after file create/open.
+/*----< GIOI_set_info() >----------------------------------------------------*/
+/* This is an GIO internal subroutine. It is a collective call, because it
+ * checks consistency of all hints among all processes.
  *
- * This subroutine is a collective call, because it checks consistency of all
- * hints among all processes.
+ * For GIO, a file info object can only be passed to GIO at file create or open
+ * call, i.e. I/O hints cannot be changed after file create/open.
  */
 int
-GIO_set_info(GIO_File fh,
-             MPI_Info users_info)
+GIOI_set_info(GIO_File fh,
+              MPI_Info users_info)
 {
     int err=GIO_NOERR, flag, nprocs;
     char value[MPI_MAX_INFO_VAL + 1];
