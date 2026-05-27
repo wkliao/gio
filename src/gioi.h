@@ -225,6 +225,9 @@ GIOI_sanity_check(const char *func_name, int lineno, GIO_File fh,
               const MPI_Offset *file_lens, MPI_Offset buf_npairs,
               const MPI_Offset *buf_offs, const MPI_Offset *buf_lens);
 
+extern int
+GIOI_set_info(GIO_File fh, MPI_Info info);
+
 /* utility APIs */
 extern char*
 GIOI_remove_file_system_type_prefix(const char *filename);
