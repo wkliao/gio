@@ -106,7 +106,7 @@ int GIOI_error_mpi(int         mpi_errorcode,
      * on each process. But in GIO, MPI_ERR_AMODE can only be caused by
      * inconsistent file open/create mode. So, if MPI-IO returns this error
      * we are sure it is because of the inconsistent mode */
-    if (errorclass == MPI_ERR_AMODE)     return GIO_EMULTIDEFINE_OMODE;
+    if (errorclass == MPI_ERR_AMODE)     return GIO_EMULTIDEFINE_AMODE;
     if (errorclass == MPI_ERR_READ_ONLY) return GIO_EPERM;
     if (errorclass == MPI_ERR_ACCESS)    return GIO_EACCESS;
     if (errorclass == MPI_ERR_BAD_FILE)  return GIO_EBAD_FILE;
@@ -182,7 +182,7 @@ GIO_strerror(int err)
             return strerror(EDQUOT);
         case GIO_EFSTYPE:
             return "Invalid file system type.";
-        case GIO_EMULTIDEFINE_OMODE:
+        case GIO_EMULTIDEFINE_AMODE:
             return "File open mode is inconsistent among processes.";
         case GIO_EMULTIDEFINE_FNC_ARGS:
             return "Arguments in collective API are inconsistent among processes.";
@@ -230,7 +230,7 @@ GIO_strerrno(int err)
         RETURN_ERRORNO(GIO_ENO_SPACE)
         RETURN_ERRORNO(GIO_EQUOTA)
         RETURN_ERRORNO(GIO_EFSTYPE)
-        RETURN_ERRORNO(GIO_EMULTIDEFINE_OMODE)
+        RETURN_ERRORNO(GIO_EMULTIDEFINE_AMODE)
         RETURN_ERRORNO(GIO_EMULTIDEFINE_FNC_ARGS)
         RETURN_ERRORNO(GIO_EMULTIDEFINE_HINTS)
         RETURN_ERRORNO(GIO_EFILEVIEW)
