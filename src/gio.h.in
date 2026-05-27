@@ -36,7 +36,7 @@
 #define GIO_EQUOTA             (-225) /* Quota exceeded */
 #define GIO_EFSTYPE            (-241) /* Invalid file system type */
 
-#define GIO_EMULTIDEFINE_OMODE    (-251) /* inconsistent file open modes among processes */
+#define GIO_EMULTIDEFINE_AMODE    (-251) /* inconsistent file open modes among processes */
 #define GIO_EMULTIDEFINE_FNC_ARGS (-269) /* inconsistent function arguments used in collective API */
 #define GIO_EMULTIDEFINE_HINTS    (-274)
 #define GIO_EFILEVIEW             (-275) /* file view is not monotonically non-decreasing */
