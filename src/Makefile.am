@@ -38,7 +38,8 @@ C_SRCS = gio_lib_version.c \
          gio_ufs_wr_indep.c \
          gio_ufs_wr_coll.c \
          gio_lustre_open.c \
-         gio_lustre_wr_coll.c
+         gio_lustre_wr_coll.c \
+         gio_flatten_subarray.c
 
 
 libgio_la_SOURCES = $(C_SRCS)
