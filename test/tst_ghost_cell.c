@@ -28,23 +28,24 @@
 #define LEN 100
 #define NGHOSTS 2
 
-/*----< main() >------------------------------------------------------------*/
+/*----< tst_ghost_cell() >--------------------------------------------------*/
 int tst_ghost_cell(const char *out_path,
                    int         coll_io,
                    MPI_Info    info)
 {
-    extern int optind;
-    extern char *optarg;
-    size_t esize;
-    int i, j, k, rank, nprocs, err, nerrs=0, verbose, omode;
-    int fd, dump_rank, len, *buf, *file_buf, nghosts;
-    int psizes[2], sizes[2], subsizes[2], starts[2], buf_len[2];
-    MPI_Offset wlen, rlen, file_npairs, *file_offs, *file_lens;
-    MPI_Offset buf_npairs, *buf_offs, *buf_lens;
+    int i, j, k, rank, nprocs, err, nerrs=0, verbose, omode, esize;
+    int fd, dump_rank, len, *buf, *file_buf, nghosts, psizes[2];
+    int f_sizes[2], f_subsizes[2], f_starts[2];
+    int b_sizes[2], b_subsizes[2], b_starts[2];
+    MPI_Offset wlen, file_npairs, *file_offs, *file_lens;
+    MPI_Offset rlen, buf_npairs, *buf_offs, *buf_lens;
     GIO_File fh;
 
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* element data type size (in this example the data type is int) */
+    esize = sizeof(int);
 
     verbose     = 0;
     dump_rank   = 0;
@@ -53,8 +54,8 @@ int tst_ghost_cell(const char *out_path,
 
     if (verbose && rank == dump_rank) {
         printf("Number of MPI processes:  %d\n",nprocs);
-        printf("Each subarray is of size: %d x %d (int) = %zd\n",
-               len, len, sizeof(int)*len*len);
+        printf("Each subarray is of size: %d x %d (int) = %d\n",
+               len, len, esize*len*len);
     }
 
     /* calculate number of processes along each dimension */
@@ -64,44 +65,62 @@ int tst_ghost_cell(const char *out_path,
     if (verbose && rank == dump_rank)
         printf("%d: 2D rank IDs: %d, %d\n",rank,rank/psizes[1], rank%psizes[1]);
 
-    /* create a subarray datatype */
-    sizes[0]    = len * psizes[0];
-    sizes[1]    = len * psizes[1];
-    subsizes[0] = len;
-    subsizes[1] = len;
-    starts[0]   = len * (rank / psizes[1]);
-    starts[1]   = len * (rank % psizes[1]);
+    /* set the global array sizes */
+    f_sizes[0]    = len * psizes[0];
+    f_sizes[1]    = len * psizes[1];
+    f_subsizes[0] = len;
+    f_subsizes[1] = len;
+    f_starts[0]   = len * (rank / psizes[1]);
+    f_starts[1]   = len * (rank % psizes[1]);
 
     if (verbose && rank == dump_rank) {
-        file_buf = (int*) malloc(sizeof(int) * sizes[0] * sizes[1]);
-        printf("%d: sizes=%d %d subsizes=%d %d starts=%d %d\n",rank,
-               sizes[0],sizes[1], subsizes[0],subsizes[1], starts[0],starts[1]);
+        printf("%d: f_sizes=%d %d f_subsizes=%d %d f_starts=%d %d\n",rank,
+               f_sizes[0],f_sizes[1], f_subsizes[0],f_subsizes[1],
+               f_starts[0],f_starts[1]);
     }
 
-    /* element data type size (in this example the data type is int) */
-    esize = sizeof(int);
+    /* construct a checkerboard partitioning file's layout and flatten it into
+     * a list of offset-length pairs.
+     */
+    err = GIO_flatten_subarray(2, esize, 0, f_sizes, f_subsizes, f_starts,
+                               &file_npairs, &file_offs, &file_lens);
+    CHECK_ERR(err)
 
-    file_npairs = subsizes[0];
-    file_offs = (MPI_Offset*) malloc(sizeof(MPI_Offset) * file_npairs);
-    file_lens = (MPI_Offset*) malloc(sizeof(MPI_Offset) * file_npairs);
-    for (i=0; i<subsizes[0]; i++) {
-        file_offs[i] = (starts[0] + i) * sizes[1] + starts[1];
-        file_offs[i] *= esize;
-        file_lens[i] = subsizes[1] * esize;
-        if (verbose && rank == dump_rank)
-            printf("%d: file[%d]  off %3lld len %3lld\n",rank,i,file_offs[i],file_lens[i]);
+    if (verbose && rank == dump_rank) {
+        for (i=0; i<file_npairs; i++)
+            printf("%d: file[%d]  off %3lld len %3lld\n",
+                   rank,i,file_offs[i],file_lens[i]);
+    }
+
+    /* set the local array sizes */
+    b_subsizes[0] = len;
+    b_subsizes[1] = len;
+    b_sizes[0]    = b_subsizes[0] * nghosts * 2;
+    b_sizes[1]    = b_subsizes[1] * nghosts * 2;
+    b_starts[0]   = nghosts;
+    b_starts[1]   = nghosts;
+
+    /* construct a local buffer memory layout with ghost cells at the both ends
+     * of each dimenion, and flatten it into a list of offset-length pairs.
+     */
+    err = GIO_flatten_subarray(2, esize, 0, b_sizes, b_subsizes, b_starts,
+                               &buf_npairs, &buf_offs, &buf_lens);
+    CHECK_ERR(err)
+
+    if (verbose && rank == dump_rank) {
+        for (i=0; i<buf_npairs; i++)
+            printf("%d:  buf[%d]  off %3lld len %3lld\n",
+                   rank,i,buf_offs[i],buf_lens[i]);
     }
 
     /* allocate and initialize I/O buffer */
     k = 0;
-    buf_len[0] = subsizes[0] + nghosts * 2;
-    buf_len[1] = subsizes[1] + nghosts * 2;
-    buf = (int*) malloc(esize * buf_len[0] * buf_len[1]);
-    for (i=0; i<buf_len[0]; i++) {
-        for (j=0; j<buf_len[1]; j++) {
-            int ij = i*buf_len[1] + j;
-            if (nghosts <= i && i < subsizes[0]+nghosts &&
-                nghosts <= j && j < subsizes[1]+nghosts)
+    buf = (int*) malloc(esize * b_sizes[0] * b_sizes[1]);
+    for (i=0; i<b_sizes[0]; i++) {
+        for (j=0; j<b_sizes[1]; j++) {
+            int ij = i*b_sizes[1] + j;
+            if (nghosts <= i && i < b_subsizes[0]+nghosts &&
+                nghosts <= j && j < b_subsizes[1]+nghosts)
                 buf[ij] = rank*100 + (k++);
             else
                 /* set all ghost cells value to -1 */
@@ -111,27 +130,15 @@ int tst_ghost_cell(const char *out_path,
 
     if (verbose && rank == dump_rank) {
         printf("\nDump the contents of write buffer:\n");
-        for (i=0; i<buf_len[0]; i++) {
+        for (i=0; i<b_sizes[0]; i++) {
             printf("buf[%2d][] = ",i);
-            for (j=0; j<buf_len[1]; j++) {
-                int ij = i*buf_len[1] + j;
+            for (j=0; j<b_sizes[1]; j++) {
+                int ij = i*b_sizes[1] + j;
                 printf(" %3d", buf[ij]);
             }
             printf("\n");
         }
         printf("\n\n");
-    }
-
-    /* buffer has ghost cells on 4 sides of size nghosts each */
-    buf_npairs = subsizes[0];
-    buf_offs = (MPI_Offset*) malloc(sizeof(MPI_Offset) * buf_npairs);
-    buf_lens = (MPI_Offset*) malloc(sizeof(MPI_Offset) * buf_npairs);
-    for (i=0; i<subsizes[0]; i++) {
-        buf_offs[i] = (nghosts + i) * buf_len[1] + nghosts;
-        buf_offs[i] *= esize;
-        buf_lens[i] = subsizes[1] * esize;
-        if (verbose && rank == dump_rank)
-            printf("%d:  buf[%d]  off %3lld len %3lld\n",rank,i,buf_offs[i],buf_lens[i]);
     }
 
     /* open file and truncate it to zero sized */
@@ -156,17 +163,20 @@ int tst_ghost_cell(const char *out_path,
             fprintf(stderr,"Error at file open %s (%s)", filename, strerror(errno));
             goto err_out;
         }
-        pread(fd, file_buf, sizes[0] * sizes[1] * sizeof(int), 0);
+        file_buf = (int*) malloc(esize * f_sizes[0] * f_sizes[1]);
+        off_t rlen = pread(fd, file_buf, f_sizes[0] * f_sizes[1] * esize, 0);
+        assert(rlen >= 0);
         close(fd);
-        for (i=0; i<sizes[0]; i++) {
+        for (i=0; i<f_sizes[0]; i++) {
             printf("file_buf[%2d][] = ",i);
-            for (j=0; j<sizes[1]; j++) {
-                int ij = i*sizes[1] + j;
+            for (j=0; j<f_sizes[1]; j++) {
+                int ij = i*f_sizes[1] + j;
                 printf(" %3d", file_buf[ij]);
             }
             printf("\n");
         }
         printf("\n\n");
+        free(file_buf);
     }
 
     /* check file size */
@@ -180,9 +190,10 @@ int tst_ghost_cell(const char *out_path,
             goto err_out;
         }
         off_t fsize = lseek(fd, 0, SEEK_END);
-        off_t expected = esize * sizes[0] * sizes[1];
+        off_t expected = esize * f_sizes[0] * f_sizes[1];
         if (fsize != expected) {
-            fprintf(stderr,"Error: expecting file size %lld, but got %lld\n", expected, fsize);
+            fprintf(stderr,"Error: expecting file size %lld, but got %lld\n",
+                    (long long)expected, (long long)fsize);
             err = 1;
         }
         close(fd);
@@ -194,7 +205,7 @@ int tst_ghost_cell(const char *out_path,
     CHECK_ERR(err)
 
     /* set contents of read buffer to all -1 */
-    for (i=0; i<buf_len[0] * buf_len[1]; i++) buf[i] = -1;
+    for (i=0; i<b_sizes[0] * b_sizes[1]; i++) buf[i] = -1;
 
     /* read from the file */
     rlen = GIO_read_all(fh, buf, file_npairs, file_offs, file_lens,
@@ -205,10 +216,10 @@ int tst_ghost_cell(const char *out_path,
 
     if (verbose && rank == dump_rank) {
         printf("\n\nAfter GIO_read_all, dump the whole buf:\n");
-        for (i=0; i<buf_len[0]; i++) {
+        for (i=0; i<b_sizes[0]; i++) {
             printf("buf[%2d][] = ",i);
-            for (j=0; j<buf_len[1]; j++) {
-                int ij = i*buf_len[1] + j;
+            for (j=0; j<b_sizes[1]; j++) {
+                int ij = i*b_sizes[1] + j;
                 printf(" %3d", buf[ij]);
             }
             printf("\n");
@@ -218,11 +229,11 @@ int tst_ghost_cell(const char *out_path,
 
     /* check read data */
     k = 0;
-    for (i=0; i<buf_len[0]; i++) {
-        for (j=0; j<buf_len[1]; j++) {
-            int ij = i*buf_len[1] + j;
-            if (nghosts <= i && i < subsizes[0]+nghosts &&
-                nghosts <= j && j < subsizes[1]+nghosts) {
+    for (i=0; i<b_sizes[0]; i++) {
+        for (j=0; j<b_sizes[1]; j++) {
+            int ij = i*b_sizes[1] + j;
+            if (nghosts <= i && i < b_subsizes[0]+nghosts &&
+                nghosts <= j && j < b_subsizes[1]+nghosts) {
                 int exp = rank*100 + (k++);
                 if (buf[ij] != exp) {
                     fprintf(stderr,"Error: expect buf[%d][%d] = %d but got %d\n",
@@ -250,12 +261,14 @@ int tst_ghost_cell(const char *out_path,
             fprintf(stderr,"Error at file open %s (%s)", filename, strerror(errno));
             goto err_out;
         }
-        pread(fd, file_buf, sizes[0] * sizes[1] * sizeof(int), 0);
+        file_buf = (int*) malloc(esize * f_sizes[0] * f_sizes[1]);
+        off_t rlen = pread(fd, file_buf, f_sizes[0] * f_sizes[1] * esize, 0);
+        assert(rlen >= 0);
         close(fd);
-        for (i=0; i<sizes[0]; i++) {
+        for (i=0; i<f_sizes[0]; i++) {
             printf("file_buf[%2d][] = ",i);
-            for (j=0; j<sizes[1]; j++) {
-                int ij = i*sizes[1] + j;
+            for (j=0; j<f_sizes[1]; j++) {
+                int ij = i*f_sizes[1] + j;
                 printf(" %3d", file_buf[ij]);
             }
             printf("\n");
