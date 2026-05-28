@@ -44,18 +44,16 @@ int GIOI_error_posix(char *err_msg)  /* extra error message */
 
     /* check for specific error codes understood by GIO */
     switch (errno){
-        case ENOSPC :
-            return GIO_ENO_SPACE;
+        case EACCES: return GIO_EACCESS;
+        case EBADF:  return GIO_EINVAL;
+        case ENOSPC: return GIO_ENO_SPACE;
+        case EDQUOT: return GIO_EQUOTA;
+        case ENOENT: return GIO_ENOENT;
+        case EEXIST: return GIO_EEXIST;
         case ENAMETOOLONG:
         case ENOTDIR :
         case EISDIR:
             return GIO_EBAD_FILE;
-        case EDQUOT:
-            return GIO_EQUOTA;
-        case ENOENT:
-            return GIO_ENOENT;
-        case EEXIST:
-            return GIO_EEXIST;
     }
 
     /* other errors that currently have no corresponding GIO error codes */
