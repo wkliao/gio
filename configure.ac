@@ -778,6 +778,7 @@ AC_CONFIG_FILES(Makefile \
                 utils/packaging/Makefile \
                 utils/packaging/gio.pc \
                 test/Makefile \
+                examples/Makefile \
 )
 
 AC_SUBST(enable_static)
