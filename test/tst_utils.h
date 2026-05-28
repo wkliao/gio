@@ -26,6 +26,8 @@ enum {false=0, true=1};
 #endif
 #endif
 
+#include <gioi.h>
+
 #ifndef MAX
 #define MAX(mm,nn) (((mm) > (nn)) ? (mm) : (nn))
 #endif
@@ -103,15 +105,6 @@ int inq_env_hint(char *hint_key, char **hint_value);
 #define PASS_STR "pass (%4.1fs)\n"
 #define SKIP_STR "skip\n"
 #define FAIL_STR "fail with %d mismatches\n"
-
-#define MPI_ERR(err) \
-    if (err != MPI_SUCCESS) { \
-        char err_string[MPI_MAX_ERROR_STRING+1]; \
-        int  err_len; \
-        MPI_Error_string(err, err_string, &err_len); \
-        printf("MPI Error at file %s line %d (%s)\n",__FILE__,__LINE__,err_string); \
-    }
-
 
 #ifndef HAVE_STRDUP
 extern char *strdup(const char *s);
