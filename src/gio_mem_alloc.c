@@ -424,11 +424,11 @@ void GIOI_Free_fn(void       *ptr,
     free(ptr);
 }
 
-/*----< GIO_inq_malloc_size() >----------------------------------------------*/
+/*----< GIOI_inq_malloc_size() >---------------------------------------------*/
 /* This is an independent subroutine, reporting the current aggregate size
  * allocated by malloc, yet to be freed.
  */
-int GIO_inq_malloc_size(MPI_Offset *size)
+int GIOI_inq_malloc_size(MPI_Offset *size)
 {
 #ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
@@ -444,11 +444,11 @@ int GIO_inq_malloc_size(MPI_Offset *size)
 #endif
 }
 
-/*----< GIO_inq_malloc_max_size() >------------------------------------------*/
+/*----< GIOI_inq_malloc_max_size() >-----------------------------------------*/
 /* This is an independent subroutine, reporting the max watermark ever
  * researched by malloc (aggregated amount).
  */
-int GIO_inq_malloc_max_size(MPI_Offset *size)
+int GIOI_inq_malloc_max_size(MPI_Offset *size)
 {
 #ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1
@@ -464,11 +464,11 @@ int GIO_inq_malloc_max_size(MPI_Offset *size)
 #endif
 }
 
-/*----< GIO_inq_malloc_list() >---------------------------------------------*/
+/*----< GIOI_inq_malloc_list() >---------------------------------------------*/
 /* This is an independent subroutine, reporting yet-to-be-freed malloc-ed
  * space by walking the malloc tree and print yet-to-be-freed residues.
  */
-int GIO_inq_malloc_list(void)
+int GIOI_inq_malloc_list(void)
 {
 #ifdef GIOI_MALLOC_TRACE
 #if GIO_THREAD_SAFE == 1

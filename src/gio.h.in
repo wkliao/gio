@@ -114,14 +114,5 @@ GIO_read_all(GIO_File fh, void *buf,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern int
-GIO_inq_malloc_size(MPI_Offset *size);
-
-extern int
-GIO_inq_malloc_max_size(MPI_Offset *size);
-
-extern int
-GIO_inq_malloc_list(void);
-
 #endif
 

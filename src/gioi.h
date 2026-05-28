@@ -264,10 +264,10 @@ GIOI_Free_fn(void *ptr, const int lineno, const char *func,
 #define GIOI_Malloc_align(a,b) GIOI_Malloc_align_fn(a,b,__LINE__,__func__,__FILE__)
 
 extern int
-GIOI_inq_malloc_size(size_t *size);
+GIOI_inq_malloc_size(MPI_Offset *size);
 
 extern int
-GIOI_inq_malloc_max_size(size_t *size);
+GIOI_inq_malloc_max_size(MPI_Offset *size);
 
 extern int
 GIOI_inq_malloc_list(void);
