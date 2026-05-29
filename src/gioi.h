@@ -125,7 +125,7 @@ gio_ufs_wr_coll.c:       MPI_Unpack_c(
 #define GIOI_STRIPING_INHERIT 0
 
 typedef struct {
-    int nc_striping;
+    int file_striping;
     int striping_factor;
     int striping_unit;
     int start_iodevice;

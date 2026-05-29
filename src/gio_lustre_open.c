@@ -570,10 +570,9 @@ int Lustre_set_cb_node_list(GIO_File fh)
     /* To save a call to MPI_Bcast(), all processes run the same codes below to
      * calculate num_aggr, the number of aggregators (later becomes cb_nodes).
      *
-     * The calculation is based on the number of compute nodes,
-     * fh->num_NUMAs, and processes per node, nprocs_per_node. At
-     * this moment, all processes should have obtained the Lustre file striping
-     * settings.
+     * The calculation is based on the number of compute nodes, fh->num_NUMAs,
+     * and processes per node, nprocs_per_node. At this moment, all processes
+     * should have obtained the Lustre file striping settings.
      */
     striping_factor = fh->hints->striping_factor;
 
@@ -988,7 +987,7 @@ GIOI_Lustre_create(GIO_File fh)
      * Codes below try to set the striping for the new file. Precedences are:
      * 1. When hints striping_factor and striping_unit are explicitly set, they
      *    are used as the top precedence.
-     * 2. When hint nc_striping is set to "inherit", the striping will inherit
+     * 2. When hint file_striping is set to "inherit", the striping will inherit
      *    from the parent folder. If the parent folder's striping count is not
      *    set, then this hint is ignored.
      * 3. When no hint are set, set the new file's striping count to be equal
@@ -996,7 +995,7 @@ GIOI_Lustre_create(GIO_File fh)
      *    size to 1 MiB.
      */
     if (fh->hints->striping_factor == 0 &&
-        fh->hints->nc_striping == GIOI_STRIPING_INHERIT) {
+        fh->hints->file_striping == GIOI_STRIPING_INHERIT) {
         /* Inherit the file striping settings from the parent folder. */
         int dd;
         char *dirc, *dname;
