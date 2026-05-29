@@ -95,7 +95,7 @@ int hint_consistency_check(GIO_File fh)
         MPI_Bcast(root_hints, sizeof(GIOI_Hints), MPI_BYTE, 0, fh->comm);
 
         /* check hints individually against root's */
-        CHECK_HINT(nc_striping);
+        CHECK_HINT(file_striping);
         CHECK_HINT(striping_factor);
         CHECK_HINT(striping_unit);
         CHECK_HINT(start_iodevice);
@@ -180,7 +180,7 @@ GIOI_set_info(GIO_File fh,
      * a user's info. Thus, default values used below are to indicate
      * whether or not they have been customized by the users.
      */
-    fh->hints->nc_striping = GIOI_STRIPING_AUTO;
+    fh->hints->file_striping = GIOI_STRIPING_AUTO;
     fh->hints->striping_unit = 0;
     fh->hints->striping_factor = 0;
     fh->hints->start_iodevice = -1;
@@ -223,7 +223,7 @@ GIOI_set_info(GIO_File fh,
     GET_INFO_INT(ind_rd_buffer_size);
 
     /* file striping configuration */
-    GET_INFO_STR(nc_striping);
+    GET_INFO_STR(file_striping);
     GET_INFO_INT(striping_unit);
     GET_INFO_INT(striping_factor);
     GET_INFO_INT(start_iodevice);
