@@ -63,6 +63,9 @@ MPI_Offset GIO_write_all(GIO_File          fh,
   + `buf_lens` is an array containing `buf_npairs` number of non-contiguous
     request lengths, each corresponding to the element in `buf_offs`.
 
+## User documents
+* [C API references](docs/APIs.md)
+
 ## Related Projects and Application Users
 * [PnetCDF](https://parallel-netcdf.github.io), a high-level parallel I/O
   library for accessing Unidata's NetCDF, files in classic formats.
