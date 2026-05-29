@@ -12,7 +12,8 @@ AM_CPPFLAGS = -I$(srcdir) -I$(top_srcdir)/src -I$(top_builddir)/src
 
 LDADD = $(top_builddir)/src/libgio.la libtestutils.la
 
-check_PROGRAMS = tst_ghost_cell
+check_PROGRAMS = tst_ghost_cell \
+                 tst_memcpy
 
 check_LTLIBRARIES = libtestutils.la
 libtestutils_la_LIBADD = $(top_builddir)/src/libgio.la
