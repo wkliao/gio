@@ -17,7 +17,8 @@ DIST_SUBDIRS = src utils test examples
 EXTRA_DIST = COPYING \
              INSTALL.md \
              README.md \
-             RELEASE_NOTES.md
+             RELEASE_NOTES.md \
+             docs
 
 PTEST_SUBDIRS = test
 
