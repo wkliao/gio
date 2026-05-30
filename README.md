@@ -66,6 +66,7 @@ MPI_Offset GIO_write_all(GIO_File          fh,
 ## User documents
 * [C API references](docs/APIs.md)
 * A complete list of [I/O hints](docs/hints.md) supported by GIO
+* GIO [utility programs](./utils/README.md)
 
 ## Related Projects and Application Users
 * [PnetCDF](https://parallel-netcdf.github.io), a high-level parallel I/O
