@@ -35,6 +35,9 @@ env >& AS_MESSAGE_LOG_FD
 echo '-------------------------------' >& AS_MESSAGE_LOG_FD
 echo '' >& AS_MESSAGE_LOG_FD
 
+# search all local macro files in folder m4
+AC_CONFIG_MACRO_DIRS([m4])
+
 dnl Note getting command line should be done before calling AM_INIT_AUTOMAKE
 dnl as AM_INIT_AUTOMAKE modifies command line $*
 if test "x$ac_configure_args_raw" = x ; then
@@ -53,8 +56,16 @@ AM_SILENT_RULES([yes])
 # configure, Makefile.ins, etc.
 AM_MAINTAINER_MODE([enable])
 
-# search all local macro files in folder m4
-AC_CONFIG_MACRO_DIRS([m4])
+# AM_PROG_AR is first recognized/traced in autoconf 2.68
+# Use it only if we want support for unusual archivers such as Microsoft
+# lib.. AM_PROG_AR must be called before LT_INIT
+AM_PROG_AR
+
+LT_PREREQ([2.5.4])
+LT_INIT
+
+dnl Overwrite func_cc_basename() defined in libtool.m4
+UD_FUNC_CC_BASENAME
 
 dnl AM_EXTRA_RECURSIVE_TARGETS macro was introduced into automake 1.13
 AM_EXTRA_RECURSIVE_TARGETS([tests])
@@ -68,6 +79,12 @@ GIO_VERSION_PRE=`echo ${PACKAGE_VERSION} | cut -d'-' -f2`
 dnl Note major, minor, and sub are required, but pre is not.
 GIO_VERSION=${PACKAGE_VERSION}
 
+AC_SUBST(GIO_VERSION_MAJOR)
+AC_SUBST(GIO_VERSION_MINOR)
+AC_SUBST(GIO_VERSION_SUB)
+AC_SUBST(GIO_VERSION_PRE)
+AC_SUBST(GIO_VERSION)
+
 dnl user defined macro for printing messages for debugging
 dnl add "gio_ac_debug=yes" at command line to enable
 AC_DEFUN([UD_MSG_DEBUG],
@@ -76,12 +93,6 @@ AC_DEFUN([UD_MSG_DEBUG],
           fi
          ]
 )
-
-AC_SUBST(GIO_VERSION_MAJOR)
-AC_SUBST(GIO_VERSION_MINOR)
-AC_SUBST(GIO_VERSION_SUB)
-AC_SUBST(GIO_VERSION_PRE)
-AC_SUBST(GIO_VERSION)
 
 dnl Note that command 'date' is not portable across Unix platforms.
 dnl But release date only matters to GIO developers who make the releases.
@@ -93,7 +104,8 @@ AC_SUBST(GIO_RELEASE_DATE_FULL)
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(CONFIGURE_ARGS_CLEAN)
 
-dnl autoheader only adds these templates to the first invocation of AC_CONFIG_HEADERS
+dnl autoheader only adds templates set below to the first invocation of
+dnl AC_CONFIG_HEADERS
 AH_TEMPLATE([GIOI_MALLOC_TRACE],   [Define if to enable malloc tracing])
 AH_TEMPLATE([HAVE_MPI_LARGE_COUNT], [Define if MPI APIs have arguments of type MPI_Count])
 
@@ -237,11 +249,15 @@ fi
 # Now MPICC is configured if parallel I/O feature is enabled, do some basic
 # compiler tests
 CC=${MPICC}
-AC_PROG_CC
+AC_PROG_CC([${MPICC}])
 dnl AM_PROG_CC_C_O
 
 dnl get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
 AX_COMPILER_VENDOR
+
+dnl get compiler basename (e.g. gcc-14, nvc)
+UD_MPI_COMPILER_BASENAME(MPICC)
+UD_MSG_DEBUG(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
 
 if test "x${ax_cv_c_compiler_vendor}" = xgnu ; then
    # gcc command-line option "-dumpversion" can also show version.
@@ -300,14 +316,6 @@ fi
 # compute canonical system types
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
-
-# AM_PROG_AR is first recognized/traced in autoconf 2.68
-# Use it only if we want support for unusual archivers such as Microsoft
-# lib.. AM_PROG_AR must be called before LT_INIT
-AM_PROG_AR
-
-LT_PREREQ([2.5.4])
-LT_INIT
 
 if test "x$MPICC" != x && test "x$enable_shared" = xyes ; then
    # Call LT_OUTPUT to produce file ./libtool which is used later in
