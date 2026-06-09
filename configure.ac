@@ -255,10 +255,6 @@ dnl AM_PROG_CC_C_O
 dnl get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
 AX_COMPILER_VENDOR
 
-dnl get compiler basename (e.g. gcc-14, nvc)
-UD_MPI_COMPILER_BASENAME(MPICC)
-UD_MSG_DEBUG(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
-
 if test "x${ax_cv_c_compiler_vendor}" = xgnu ; then
    # gcc command-line option "-dumpversion" can also show version.
    AC_MSG_CHECKING([whether gcc version is greater than 10.0.0])
@@ -272,8 +268,16 @@ fi
 
 if test "x$MPICC" != x ; then
    # get base compiler command of MPI C compiler wrapper in
-   # ac_cv_mpi_compiler_base_MPICC (e.g. /usr/bin/gcc)
-   MPI_COMPILER_BASE(MPICC)
+   # ac_cv_mpi_compiler_base_MPICC (e.g. gcc-14, nvc)
+   UD_MPI_COMPILER_BASENAME(MPICC)
+   UD_MSG_DEBUG(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
+
+   # MPICXX=CC
+   # UD_MPI_COMPILER_BASENAME(MPICXX)
+   # UD_MSG_DEBUG(MPICXX=${MPICXX} basename=$ud_cv_mpi_compiler_basename_MPICXX)
+   # MPIF90=ftn
+   # UD_MPI_COMPILER_BASENAME(MPIF90)
+   # UD_MSG_DEBUG(MPIF90=${MPIF90} basename=$ud_cv_mpi_compiler_basename_MPIF90)
 fi
 
 # Set output variable CPP to a command that runs the C preprocessor.
