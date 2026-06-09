@@ -104,6 +104,8 @@ LUSTRE_Fill_send_buffer(GIO_File           fh,
      * to be a positive number at the call to GIO_write_at_all().
      */
     assert(fh->fview.npairs > 0);
+
+    orig_ptr = (char*)buf + user_buf_idx;
 #endif
 
     /* fh->fview.npairs: the number of file offset-length pairs this rank
