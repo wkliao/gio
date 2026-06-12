@@ -64,19 +64,31 @@ AM_PROG_AR
 LT_PREREQ([2.5.4])
 LT_INIT
 
-dnl Overwrite func_cc_basename() defined in libtool.m4
+# Overwrite func_cc_basename() defined in libtool.m4
+# This step is necessary, as all MPI compilers are wrappers and libtool needs
+# the exact compiler names to select proper compile and link flags.
 UD_FUNC_CC_BASENAME
 
-dnl AM_EXTRA_RECURSIVE_TARGETS macro was introduced into automake 1.13
+# AM_EXTRA_RECURSIVE_TARGETS macro was introduced into automake 1.13
+# This enable to run command "make tests" to build all test programs.
 AM_EXTRA_RECURSIVE_TARGETS([tests])
 
-dnl parse the version numbers to 4 env variables
+# To debug configure process (not compilation process), add "gio_ac_debug=yes"
+# at the configure command line
+AC_DEFUN([UD_MSG_DEBUG],
+         [if test "x${gio_ac_debug}" = xyes ; then
+             AC_MSG_NOTICE([DEBUG: $1])
+          fi
+         ]
+)
+
+# parse the package version numbers to 4 env variables
 GIO_VERSION_MAJOR=`echo ${PACKAGE_VERSION} | cut -d. -f1`
 GIO_VERSION_MINOR=`echo ${PACKAGE_VERSION} | cut -d. -f2`
 GIO_VERSION_SUB=`echo ${PACKAGE_VERSION} | cut -d. -f3 | cut -d'-' -f1`
 GIO_VERSION_PRE=`echo ${PACKAGE_VERSION} | cut -d'-' -f2`
 
-dnl Note major, minor, and sub are required, but pre is not.
+# Note major, minor, and sub are required, but pre is not.
 GIO_VERSION=${PACKAGE_VERSION}
 
 AC_SUBST(GIO_VERSION_MAJOR)
@@ -85,17 +97,8 @@ AC_SUBST(GIO_VERSION_SUB)
 AC_SUBST(GIO_VERSION_PRE)
 AC_SUBST(GIO_VERSION)
 
-dnl user defined macro for printing messages for debugging
-dnl add "gio_ac_debug=yes" at command line to enable
-AC_DEFUN([UD_MSG_DEBUG],
-         [if test "x${gio_ac_debug}" = xyes ; then
-             AC_MSG_NOTICE([DEBUG: $1])
-          fi
-         ]
-)
-
-dnl Note that command 'date' is not portable across Unix platforms.
-dnl But release date only matters to GIO developers who make the releases.
+# Note that command 'date' is not portable across Unix platforms.
+# But release date only matters to GIO developers who make the releases.
 GIO_RELEASE_DATE="`date '+%B %-d, %Y'`"
 AC_SUBST(GIO_RELEASE_DATE)
 GIO_RELEASE_DATE_FULL="`date '+%Y-%m-%d'`"
@@ -104,12 +107,12 @@ AC_SUBST(GIO_RELEASE_DATE_FULL)
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(CONFIGURE_ARGS_CLEAN)
 
-dnl autoheader only adds templates set below to the first invocation of
-dnl AC_CONFIG_HEADERS
+# autoheader only adds templates set below to the first invocation of
+# AC_CONFIG_HEADERS
 AH_TEMPLATE([GIOI_MALLOC_TRACE],   [Define if to enable malloc tracing])
 AH_TEMPLATE([HAVE_MPI_LARGE_COUNT], [Define if MPI APIs have arguments of type MPI_Count])
 
-dnl an option to use a customized rm command
+# an option to use a customized rm command
 RM=rm
 AC_ARG_VAR(RM, Command for deleting files or directories. @<:@default: rm@:>@)
 if test "x${RM}" != x ; then
@@ -125,12 +128,12 @@ if test "x${RM}" != x ; then
 fi
 UD_MSG_DEBUG([RM=$RM])
 
-dnl AC_PROG_SED and AC_PROG_GREP are only available on autoconf 2.60 and later
+# AC_PROG_SED and AC_PROG_GREP are only available on autoconf 2.60 and later
 AC_PROG_AWK
 AC_PROG_GREP
 AC_PROG_EGREP
 AC_PROG_SED
-dnl check sed command option -i and set SED_I (this requires RM defined)
+# check sed command option -i and set SED_I (this requires RM defined)
 UD_PROG_SED_I
 
 AC_ARG_ENABLE(echo,
@@ -250,9 +253,9 @@ fi
 # compiler tests
 CC=${MPICC}
 AC_PROG_CC([${MPICC}])
-dnl AM_PROG_CC_C_O
+# AM_PROG_CC_C_O
 
-dnl get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
+# get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
 AX_COMPILER_VENDOR
 
 if test "x${ax_cv_c_compiler_vendor}" = xgnu ; then
@@ -268,7 +271,7 @@ fi
 
 if test "x$MPICC" != x ; then
    # get base compiler command of MPI C compiler wrapper in
-   # ac_cv_mpi_compiler_base_MPICC (e.g. gcc-14, nvc)
+   # ac_cv_mpi_compiler_base_MPICC (e.g. gcc-14, nvc, icx)
    UD_MPI_COMPILER_BASENAME(MPICC)
    UD_MSG_DEBUG(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
 
@@ -307,11 +310,6 @@ if test "x$MPICC" != x ; then
         through --with-mpi configure flag. Abort.
       -----------------------------------------------------------------------])
    ])])
-
-   # check the base of MPICC compiler
-   AM_CONDITIONAL(MPICC_IS_XLC,  [test "x${ax_cv_c_compiler_vendor}" = xibm])
-   AM_CONDITIONAL(MPICC_IS_PGCC, [test "x${ax_cv_c_compiler_vendor}" = xportland])
-   AM_CONDITIONAL(MPICC_IS_FCCPX,[test "x${ax_cv_c_compiler_vendor}" = xfujitsu])
 
    # print out MPI version and vendor information
    CHECK_MPI_VERSION
@@ -394,8 +392,7 @@ AM_CONDITIONAL(TEST_SYMLINK, [test "x$ac_cv_func_unlink" = xyes &&
 
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
-                    [Enable GIO internal debug mode. This also enables safe mode.
-                     @<:@default: disabled@:>@])],
+                    [Enable GIO internal debug mode. @<:@default: disabled@:>@])],
     [debug=${enableval}], [debug=no]
 )
 
@@ -415,7 +412,8 @@ fi
 debug_mode=0
 if test "x${debug}" = xyes; then
    dnl check required functions for enabling malloc tracing
-   if test "x${ac_cv_func_tsearch}" = xyes && test "x${ac_cv_func_tdelete}" = xyes ; then
+   if test "x${ac_cv_func_tsearch}" = xyes &&
+      test "x${ac_cv_func_tdelete}" = xyes ; then
       AC_DEFINE(GIOI_MALLOC_TRACE)
    fi
    debug_mode=1
@@ -427,16 +425,16 @@ if test "x$MPICC" != x ; then
    AC_CHECK_SIZEOF([MPI_Offset], [], [#include <mpi.h>])
    AC_CHECK_SIZEOF([MPI_Aint], [], [#include <mpi.h>])
 
-   dnl check availability of MPI_Count, which is added in MPI 3.0 standard.
-   dnl The new MPI functions added in 3.0 that have arguments of type MPI_Count:
-   dnl MPI_Type_size_x, MPI_Type_get_extent_x, MPI_Type_get_true_extent_x, and
-   dnl MPI_Get_elements_x
+   # check availability of MPI_Count, which is added in MPI 3.0 standard.
+   # The new MPI functions added in 3.0 that have arguments of type MPI_Count:
+   # MPI_Type_size_x, MPI_Type_get_extent_x, MPI_Type_get_true_extent_x, and
+   # MPI_Get_elements_x
    AC_CHECK_TYPE([MPI_Count], [], [], [#include <mpi.h>])
    if test "x${ac_cv_type_MPI_Count}" != xyes; then
       AC_MSG_ERROR([
       -----------------------------------------------------------------------
-      The MPI compiler does not support MPI_Count. An MPI library supporting
-      MPI_Count is required.
+      An MPI library supporting MPI_Count is required, but the supplied MPI
+      compiler, $MPICC, does not support MPI_Count.
       -----------------------------------------------------------------------])
    fi
    AC_CHECK_SIZEOF([MPI_Count], [], [#include <mpi.h>])
