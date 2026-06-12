@@ -73,7 +73,7 @@
  */
 #include <lustre/lustreapi.h>
 
-#define GIOI_LUSTRE_DEBUG
+// #define GIOI_LUSTRE_DEBUG
 // #define GIOI_LUSTRE_DEBUG_VERBOSE
 
 #define PATTERN_STR(pattern, int_str) (                                     \
