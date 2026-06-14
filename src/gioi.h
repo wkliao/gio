@@ -73,6 +73,7 @@ gio_ufs_wr_coll.c:       MPI_Unpack_c(
 
 #define GIOI_FS_UFS        152    /* Unix file system */
 #define GIOI_FS_LUSTRE     163    /* Lustre file system */
+#define GIOI_FS_DAOS       170    /* DAOS file system */
 
 #define GIOI_LUSTRE_MAX_OSTS 256  /* Maximum number of Lustre OSTs if hint
                                   * striping_factor is not set by user.

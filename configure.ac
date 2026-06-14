@@ -563,6 +563,37 @@ fi
 # AC_SUBST(MIMIC_LUSTRE, [$minicking_lustre])
 AM_CONDITIONAL(MIMIC_LUSTRE, [test x$minicking_lustre = x1])
 
+#
+# Check if DAOS is available by verifying presence of DAOS header files
+#
+has_daos=yes
+AC_CHECK_HEADERS([daos_prop.h],, [has_daos=no])
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_HEADERS([daos_obj_class.h],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_HEADERS([daos_uns.h],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_LIB([gurt], [d_hash_table_create],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_LIB([uuid], [uuid_generate],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_LIB([daos], [daos_init],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_LIB([dfs], [dfs_mount],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_CHECK_LIB([duns], [duns_resolve_path],, [has_daos=no])
+fi
+if test "x$has_daos" = xyes ; then
+   AC_DEFINE(HAVE_DAOS, 1, [Define for DAOS])
+fi
+AM_CONDITIONAL(HAVE_DAOS, [test x$has_daos = xyes])
+
 if test "x${debug}" = xyes; then
    # add -g flag if not presented
    # remove all -O and -fast flags

@@ -40,6 +40,13 @@
 #include <sys/stat.h> /* open(), fstat(), lstat(), stat() */
 #endif
 
+#ifdef HAVE_DAOS
+#include <daos_prop.h>      /* daos_cont_layout_t and daos_pro_t */
+#include <daos_obj_class.h> /* daos_oclass_id_t */
+#include <daos_cont.h>      /* DAOS_CONT_HINT_MAX_LEN */
+#include <daos_uns.h>
+#endif
+
 #include "gioi.h"
 
 /* In a strict ANSI environment, S_ISLNK may not be defined. Fix that here.
@@ -117,6 +124,14 @@ void parentdir(const char *filename, char **dirnamep)
 #define LL_SUPER_MAGIC 0x0BD00BD0
 #endif
 
+#if !defined(DAOS_SUPER_MAGIC)
+#define DAOS_SUPER_MAGIC (0xDA05AD10)
+#endif
+
+#if !defined(FUSE_SUPER_MAGIC)
+#define FUSE_SUPER_MAGIC  0x65735546
+#endif
+
 static int check_statfs(const char *filename, int64_t * file_id)
 {
     int err = 0;
@@ -173,6 +188,27 @@ static int check_statfs(const char *filename, int64_t * file_id)
         return 0;
     }
 #endif
+
+    /* fuse is a special case: normally we don't care if a file is on fuse or
+     * not, unless that file is actually a DAOS file
+     */
+    if (*file_id == FUSE_SUPER_MAGIC) {
+        *file_id = UNKNOWN_SUPER_MAGIC;
+#ifdef HAVE_DAOS
+        int ret;
+	/* DAOS adds a wrinkle here:  fuse overwrites the backend's stat
+	 * structure with the fuse filesystem type.  For DAOS, we have to make
+	 * a special call to see if a file on FUSE is actually DAOS
+	 */
+        struct duns_attr_t attr = { 0 };
+
+        ret = duns_resolve_path(filename, &attr);
+        if (ret == 0)
+            *file_id = DAOS_SUPER_MAGIC;
+        duns_destroy_attr(&attr);
+#endif
+    }
+
     return err;
 }
 
@@ -189,6 +225,8 @@ int GIOI_FileSysType(const char *filename)
     if (colon != NULL) { /* there is a prefix end with : */
         if (!strncmp(filename, "lustre", 6))
             return GIOI_FS_LUSTRE;
+	else if (!strncmp(filename, "daos", 4))
+            return GIOI_FS_DAOS;
         else if (!strncmp(filename, "ufs", 3))
             return GIOI_FS_UFS;
         else
@@ -225,6 +263,8 @@ int GIOI_FileSysType(const char *filename)
 
     if (file_id == LL_SUPER_MAGIC)
         return GIOI_FS_LUSTRE;
+    else if (file_id == DAOS_SUPER_MAGIC)
+        return GIOI_FS_DAOS;
     else
         return GIOI_FS_UFS; /* UFS support if we don't know what else to use */
 }
