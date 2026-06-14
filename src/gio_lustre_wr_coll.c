@@ -1301,7 +1301,7 @@ commit_comm_phase(GIO_File      fh,
     /* receiving part */
 #if GIO_PROFILING_MODE == 1
     /* recv buffer type profiling */
-    int nrecvs=0;
+    // int nrecvs=0;
     MPI_Offset max_r_amnt=0, max_r_count=0;
 #endif
 
@@ -1316,7 +1316,7 @@ commit_comm_phase(GIO_File      fh,
                 r_amnt += recv_list[i].len[j];
             max_r_amnt = MAX(max_r_amnt, r_amnt);
             max_r_count = MAX(max_r_count, recv_list[i].num);
-            nrecvs++;
+            // nrecvs++;
 #endif
 
             /* combine reqs using new datatype */
@@ -1338,7 +1338,7 @@ commit_comm_phase(GIO_File      fh,
     /* send reqs */
 #if GIO_PROFILING_MODE == 1
     /* send buffer type profiling */
-    int nsends=0;
+    // int nsends=0;
     MPI_Offset max_s_amnt=0, max_s_count=0;
 #endif
 
@@ -1352,7 +1352,7 @@ commit_comm_phase(GIO_File      fh,
             s_amnt += send_list[i].len[j];
         max_s_amnt = MAX(max_s_amnt, s_amnt);
         max_s_count = MAX(max_s_count, send_list[i].num);
-        nsends++;
+        // nsends++;
 #endif
 
         /* combine reqs using new datatype */
