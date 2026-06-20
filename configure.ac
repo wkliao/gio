@@ -274,6 +274,10 @@ if test "x$MPICC" != x ; then
    # ac_cv_mpi_compiler_base_MPICC (e.g. gcc-14, nvc, icx)
    UD_MPI_COMPILER_BASENAME(MPICC)
    UD_MSG_DEBUG(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
+   # AC_MSG_WARN(MPICC=${MPICC} basename=$ud_cv_mpi_compiler_basename_MPICC)
+   # AC_MSG_WARN(ud_vendor_version_MPICC=$ud_vendor_version_MPICC)
+   AC_SUBST([MPICC_BASE], [$ud_cv_mpi_compiler_basename_MPICC])
+   AC_SUBST([MPICC_BASE_VERSION], [$ud_vendor_version_MPICC])
 
    # MPICXX=CC
    # UD_MPI_COMPILER_BASENAME(MPICXX)
@@ -318,6 +322,12 @@ if test "x$MPICC" != x ; then
 
    # print out MPI version and vendor information
    CHECK_MPI_VERSION
+   # AC_MSG_WARN(ud_mpi_standard_ver=$ud_mpi_standard_ver)
+   # AC_MSG_WARN([ax_cv_mpi_compiler_vendor=$ax_cv_mpi_compiler_vendor])
+   # AC_MSG_WARN([ax_cv_mpi_compiler_version=$ax_cv_mpi_compiler_version])
+   AC_SUBST([MPI_VERSION], [$ud_mpi_standard_ver])
+   AC_SUBST([MPI_VENDOR], [$ax_cv_mpi_compiler_vendor])
+   AC_SUBST([MPI_VENDOR_VERSION], [$ax_cv_mpi_compiler_version])
 fi
 
 # compute canonical system types
