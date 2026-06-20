@@ -784,6 +784,12 @@ AC_SUBST(ABIVERSIONFLAGS)
 
 # Check if GIO is being built as a subproject
 AM_CONDITIONAL(BUILD_AS_SUBPROJECT, [test "x$GIO_SUB_BUILD" = xyes])
+if test "x$GIO_SUB_BUILD" = xyes ; then
+   BUILD_AS_SUBPROJECT=1
+else
+   BUILD_AS_SUBPROJECT=0
+fi
+AC_SUBST(BUILD_AS_SUBPROJECT)
 
 AC_CONFIG_FILES(Makefile \
                 src/Makefile \

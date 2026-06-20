@@ -55,6 +55,9 @@ typedef int* MPI_Info;
 #endif
 
 /*---- Public APIs ----------------------------------------------------------*/
+#ifdef PUBLIC_API
+#undef PUBLIC_API
+#endif
 
 #if defined _WIN32 || defined __CYGWIN__
   #ifdef BUILDING_DLL
@@ -67,6 +70,16 @@ typedef int* MPI_Info;
     #define PUBLIC_API __attribute__ ((visibility ("default")))
   #else
     #define PUBLIC_API
+  #endif
+#endif
+
+/* If GIO is being built as a subproject/submodule of another software, such as
+ * PnetCDF, then make all GIO APIs private.
+ */
+#if 1 == @BUILD_AS_SUBPROJECT@
+  #ifdef PUBLIC_API
+  #undef PUBLIC_API
+  #define PUBLIC_API
   #endif
 #endif
 
