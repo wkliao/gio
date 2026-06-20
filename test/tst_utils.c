@@ -367,13 +367,13 @@ skip_diff:
 
     /* check if there is any malloc residue */
     MPI_Offset malloc_size, sum_size;
-    err = GIOI_inq_malloc_size(&malloc_size);
+    err = GIO_inq_malloc_size(&malloc_size);
     if (err == GIO_NOERR) {
         MPI_Reduce(&malloc_size, &sum_size, 1, MPI_OFFSET, MPI_SUM, 0, MPI_COMM_WORLD);
         if (rank == 0 && sum_size > 0)
             printf("heap memory allocated by GIO internally has %lld bytes yet to be freed\n",
                    sum_size);
-        if (malloc_size > 0) GIOI_inq_malloc_list();
+        if (malloc_size > 0) GIO_inq_malloc_list();
     }
 
 err_out:
