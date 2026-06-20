@@ -55,59 +55,74 @@ typedef int* MPI_Info;
 #endif
 
 /*---- Public APIs ----------------------------------------------------------*/
-extern const char*
+
+#if defined _WIN32 || defined __CYGWIN__
+  #ifdef BUILDING_DLL
+    #define PUBLIC_API __declspec(dllexport)
+  #else
+    #define PUBLIC_API __declspec(dllimport)
+  #endif
+#else
+  #if __GNUC__ >= 4
+    #define PUBLIC_API __attribute__ ((visibility ("default")))
+  #else
+    #define PUBLIC_API
+  #endif
+#endif
+
+PUBLIC_API const char*
 GIO_inq_libvers(void);
 
-extern const char*
+PUBLIC_API const char*
 GIO_strerror(int err);
 
-extern const char*
+PUBLIC_API const char*
 GIO_strerrno(int err);
 
-extern int
+PUBLIC_API int
 GIO_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info,
                 GIO_File *fh);
 
-extern int
+PUBLIC_API int
 GIO_close(GIO_File *fh);
 
-extern int
+PUBLIC_API int
 GIO_sync(GIO_File fh);
 
-extern int
+PUBLIC_API int
 GIO_delete(const char *filename);
 
-extern int
+PUBLIC_API int
 GIO_set_size(GIO_File fh, MPI_Offset size);
 
-extern int
+PUBLIC_API int
 GIO_get_size(GIO_File fh, MPI_Offset *size);
 
-extern int
+PUBLIC_API int
 GIO_get_info(GIO_File fh, MPI_Info *info_used);
 
-extern MPI_Offset
+PUBLIC_API MPI_Offset
 GIO_write(GIO_File fh, const void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern MPI_Offset
+PUBLIC_API MPI_Offset
 GIO_write_all(GIO_File fh, const void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern MPI_Offset
+PUBLIC_API MPI_Offset
 GIO_read(GIO_File fh, void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-extern MPI_Offset
+PUBLIC_API MPI_Offset
 GIO_read_all(GIO_File fh, void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
@@ -115,10 +130,19 @@ GIO_read_all(GIO_File fh, void *buf,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
 
-extern int
+PUBLIC_API int
 GIO_flatten_subarray(int ndims, int esize, MPI_Offset disp, const int *sizes,
                 const int *subsizes, const int *starts, MPI_Offset *npairs,
                 MPI_Offset **offs, MPI_Offset **lens);
+
+PUBLIC_API int
+GIO_inq_malloc_size(MPI_Offset *size);
+
+PUBLIC_API int
+GIO_inq_malloc_max_size(MPI_Offset *size);
+
+PUBLIC_API int
+GIO_inq_malloc_list(void);
 
 #endif
 

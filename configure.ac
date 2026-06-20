@@ -287,6 +287,11 @@ fi
 # Some C compilers require -E to be used as C preprocessor.
 AC_PROG_CPP
 
+# Declare visibility of all functions are by default hidden if the compiler
+# supports it. Check if the C compiler supports -fvisibility=hidden
+AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],
+                      [CFLAGS="$CFLAGS -fvisibility=hidden"])
+
 # this call needs at least autoconf version 2.60
 # AC_USE_SYSTEM_EXTENSIONS
 
