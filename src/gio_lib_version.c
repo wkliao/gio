@@ -13,26 +13,28 @@
  * "\044Id: \100(#) GIO library version 1.0.0 of 13 Apr 2026 $"
  * in the library file (libgio.a).
  *
- * This string must be made a global variable. Otherwise, it won't work
- * when compiled with optimization options, e.g. -O2
+ * This string must be made a global variable. Otherwise, it won't work when
+ * compiled with optimization options, e.g. -O2
+ *
+ * Contents of string gio_libvers is slightly different from the one to be
+ * returned from ncmpi_inq_libvers(). gio_libvers is to be used for command
+ * "ident" to identify the RCS keyword strings. Note command "ident' looks for
+ * a specific keyword pattern and print it. See man page of ident.  One can run
+ * command "ident libfoo.a" to obtain the version string of library named foo
+ * (or an executable compiled from that library). In the PnetCDF case, the
+ * command "ident libgio.so" will print the contents of gio_libvers.
  */
-char const gio_libvers[] =
+char const gio_libvers[128] =
     "\044Id: \100(#) GIO library version "GIO_VERSION" of "GIO_RELEASE_DATE" $";
 
-/* a cleaner version for running command "strings", e.g.
- * % strings libgio.a | grep "GIO library version"
+/* Below gio_lib_vers is a cleaner version of gio_libvers. It is for running
+ * command "strings", e.g.
+ *    % strings libgio.a | grep "^GIO library version"
  * or
- * % strings a.out | grep "GIO library version"
+ *    % strings a.out | grep "^GIO library version"
  */
-char const gio_lib_vers[] = "GIO library version "GIO_VERSION" of "GIO_RELEASE_DATE;
-
-/* gio_libvers is slightly different from the one returned from
- * GIO_inq_libvers(). The string gio_libvers is for command "ident" to
- * use. People can run command ident libgio.a to obtain the version of a
- * library (or an executable built from that library). In GIO case, the
- * command will print the string of gio_libvers. Command "ident' looks for
- * a specific keyword pattern and print it. See man page of ident.
- */
+char const gio_lib_vers[128] =
+    "GIO library version "GIO_VERSION" of "GIO_RELEASE_DATE;
 
 /*----< GIO_inq_libvers() >--------------------------------------------------*/
 const char*
