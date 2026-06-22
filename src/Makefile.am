@@ -8,6 +8,8 @@ SUFFIXES = .a .o .c .h
 
 AM_CPPFLAGS  = -I${srcdir}/src
 
+AM_CFLAGS = @C_VISIBILITY_FLAGS@
+
 if BUILD_AS_SUBPROJECT
    noinst_LTLIBRARIES = libgio.la
 else

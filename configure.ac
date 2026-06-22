@@ -293,8 +293,10 @@ AC_PROG_CPP
 
 # Declare visibility of all functions are by default hidden if the compiler
 # supports it. Check if the C compiler supports -fvisibility=hidden
+C_VISIBILITY_FLAGS=
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],
-                      [CFLAGS="$CFLAGS -fvisibility=hidden"])
+                      [C_VISIBILITY_FLAGS="-fvisibility=hidden"])
+AC_SUBST(C_VISIBILITY_FLAGS)
 
 # this call needs at least autoconf version 2.60
 # AC_USE_SYSTEM_EXTENSIONS
