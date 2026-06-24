@@ -206,6 +206,7 @@ AC_DEFUN([LT_MPI_CHECK_SHLIB],[
    if test "x$RM" = xrm || test "x$RM" = "x/bin/rm" ; then
       RM="$RM -f"
    fi
+   # must add '--tag=CC', otherwise autotool 2.73 failed.
    ac_ltcompile='./libtool --tag=CC --mode=compile $MPICC -c $CFLAGS $CPPFLAGS conftest.$ac_ext -o conftest.lo >&AS_MESSAGE_LOG_FD'
    ac_ltlink_la='./libtool --tag=CC --mode=link $MPICC -rpath `pwd` $CFLAGS $LDFLAGS -o libconftest.la conftest.lo $LIBS >&AS_MESSAGE_LOG_FD'
    AS_IF([AC_TRY_EVAL([ac_ltcompile]) &&
@@ -232,6 +233,7 @@ AC_DEFUN([CHECK_MPI_VERSION],[
       AC_MSG_RESULT([information unavailable])
    else
       AC_MSG_RESULT([${mpi_version}.${mpi_subversion}])
+      ud_mpi_standard_ver="${mpi_version}.${mpi_subversion}"
    fi
 
    AC_CHECK_DECL([CRAY_MPICH_VERSION], [], [], [#include <mpi.h>])
@@ -372,7 +374,7 @@ AC_DEFUN([UD_MPI_COMPILER_BASENAME],[
            #    % cc --version
            #      nvc 25.5-0 64-bit target on x86-64 Linux -tp zen3-64
 
-           compile_basename=`$compile_cmd --version -c |& grep -v '^$' | head -n1 | cut -d' ' -f1`
+           compile_basename=`$compile_cmd --version -c 2>&1 | grep -v '^$' | head -n1 | cut -d' ' -f1`
            case "$compile_basename" in
                "gcc"*)
                    ;;
@@ -408,7 +410,7 @@ AC_DEFUN([UD_MPI_COMPILER_BASENAME],[
            #    % CC --version
            #      nvc++ 25.5-0 64-bit target on x86-64 Linux -tp zen3-64
 
-           compile_basename=`$compile_cmd --version -c |& grep -v '^$' | head -n1 | cut -d' ' -f1`
+           compile_basename=`$compile_cmd --version -c 2>&1 | grep -v '^$' | head -n1 | cut -d' ' -f1`
            case "$compile_basename" in
                "g++"*)
                    ;;
@@ -444,7 +446,7 @@ AC_DEFUN([UD_MPI_COMPILER_BASENAME],[
            #    % ftn --version
            #      nvfortran 25.5-0 64-bit target on x86-64 Linux -tp zen3-64
 
-           compile_basename=`$compile_cmd --version -c |& grep -v '^$' | head -n1 | cut -d' ' -f1`
+           compile_basename=`$compile_cmd --version -c 2>&1 | grep -v '^$' | head -n1 | cut -d' ' -f1`
            case "$compile_basename" in
                "gfortran"*)
                    ;;
@@ -484,6 +486,7 @@ AC_DEFUN([UD_MPI_COMPILER_BASENAME],[
    else
       AC_MSG_RESULT([not found])
    fi
+   ud_vendor_version_$1=`$compile_basename --version -c 2>&1 | grep -v '^$' | head -n1`
    unset compile_basename
    unset compile_cmd
 ])# UD_MPI_COMPILER_BASENAME
