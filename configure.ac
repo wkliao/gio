@@ -56,23 +56,6 @@ AM_SILENT_RULES([yes])
 # configure, Makefile.ins, etc.
 AM_MAINTAINER_MODE([enable])
 
-# AM_PROG_AR is first recognized/traced in autoconf 2.68
-# Use it only if we want support for unusual archivers such as Microsoft
-# lib.. AM_PROG_AR must be called before LT_INIT
-AM_PROG_AR
-
-LT_PREREQ([2.5.4])
-LT_INIT
-
-# Overwrite func_cc_basename() defined in libtool.m4
-# This step is necessary, as all MPI compilers are wrappers and libtool needs
-# the exact compiler names to select proper compile and link flags.
-UD_FUNC_CC_BASENAME
-
-# AM_EXTRA_RECURSIVE_TARGETS macro was introduced into automake 1.13
-# This enable to run command "make tests" to build all test programs.
-AM_EXTRA_RECURSIVE_TARGETS([tests])
-
 # To debug configure process (not compilation process), add "gio_ac_debug=yes"
 # at the configure command line
 AC_DEFUN([UD_MSG_DEBUG],
@@ -253,10 +236,13 @@ fi
 # compiler tests
 CC=${MPICC}
 AC_PROG_CC([${MPICC}])
-# AM_PROG_CC_C_O
+
+# this call needs at least autoconf version 2.60
+AC_USE_SYSTEM_EXTENSIONS
 
 # get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
 AX_COMPILER_VENDOR
+UD_MSG_DEBUG([ax_cv_c_compiler_vendor=$ax_cv_c_compiler_vendor])
 
 if test "x${ax_cv_c_compiler_vendor}" = xgnu ; then
    # gcc command-line option "-dumpversion" can also show version.
@@ -298,9 +284,6 @@ AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],
                       [C_VISIBILITY_FLAGS="-fvisibility=hidden"])
 AC_SUBST(C_VISIBILITY_FLAGS)
 
-# this call needs at least autoconf version 2.60
-# AC_USE_SYSTEM_EXTENSIONS
-
 # enable large file support
 AC_SYS_LARGEFILE
 
@@ -332,9 +315,20 @@ if test "x$MPICC" != x ; then
    AC_SUBST([MPI_VENDOR_VERSION], [$ax_cv_mpi_compiler_version])
 fi
 
-# compute canonical system types
-AC_CANONICAL_BUILD
-AC_CANONICAL_HOST
+# AM_PROG_AR is first recognized/traced in autoconf 2.68
+# Use it only if we want support for unusual archivers such as Microsoft
+# lib.. AM_PROG_AR must be called before LT_INIT
+AM_PROG_AR
+
+# AC_PROG_CC, AC_PROG_CXX, AC_PROG_FC, AC_PROG_F77 should always be called
+# before LT_INIT
+LT_PREREQ([2.5.4])
+LT_INIT
+
+# Overwrite func_cc_basename() defined in libtool.m4
+# This step is necessary, as all MPI compilers are wrappers and libtool needs
+# the exact compiler names to select proper compile and link flags.
+UD_FUNC_CC_BASENAME
 
 if test "x$MPICC" != x && test "x$enable_shared" = xyes ; then
    # Call LT_OUTPUT to produce file ./libtool which is used later in
@@ -354,16 +348,21 @@ if test "x$MPICC" != x && test "x$enable_shared" = xyes ; then
    fi
 fi
 
+# compute canonical system types
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+
+# AM_EXTRA_RECURSIVE_TARGETS macro was introduced into automake 1.13
+# This enable to run command "make tests" to build all test programs.
+AM_EXTRA_RECURSIVE_TARGETS([tests])
+
 # AC_PROG_INSTALL
 # AC_PROG_LN_S
 # AC_PROG_MAKE_SET
 # AC_SUBST(SET_MAKE)
 
 # Check for <stdbool.h> that conforms to C99 requirements
-AC_HEADER_STDBOOL
-
-# AC_C_CONST
-AC_C_INLINE
+# AC_HEADER_STDBOOL
 
 AC_CHECK_MEMBERS([struct stat.st_blksize])
 
