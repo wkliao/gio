@@ -116,10 +116,8 @@ distclean-local:
 
 dist-hook:
 if ! BUILD_AS_SUBPROJECT
-	@if test "x${SUBDIRS}" = "xsrc" ; then \
-		$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md ; \
-		$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md ; \
-		$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md ; \
-	fi
+	$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md
+	$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md
+	$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md
 endif
 
