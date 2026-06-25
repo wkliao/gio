@@ -10,10 +10,7 @@ dnl
 AC_REVISION([m4_esyscmd_s([if test -d .git ; then git describe --always ; fi])])
 
 AC_PREREQ([2.70])
-AC_INIT([GIO], [1.0.0],
-        [],
-        [gio],
-        [])
+AC_INIT([GIO], [1.0.0], [], [gio], [https://github.com/wkliao/gio])
 
 dnl config.h.in will be created by autoreconf (autoheader)
 dnl call it right after AC_INIT, as suggested by autoconf
@@ -232,15 +229,14 @@ else
    AC_SUBST([GIO_MPI_ENABLED], [0])
 fi
 
-# Now MPICC is configured if parallel I/O feature is enabled, do some basic
-# compiler tests
+# Now the path of MPICC is set, check if the compiler works.
 CC=${MPICC}
 AC_PROG_CC([${MPICC}])
 
 # this call needs at least autoconf version 2.60
 AC_USE_SYSTEM_EXTENSIONS
 
-# get compiler vendor in ax_cv_c_compiler_vendor (e.g. gnu, intel)
+# Find compiler vendor (e.g. gnu, intel) and save in ax_cv_c_compiler_vendor
 AX_COMPILER_VENDOR
 UD_MSG_DEBUG([ax_cv_c_compiler_vendor=$ax_cv_c_compiler_vendor])
 
@@ -265,7 +261,7 @@ if test "x$MPICC" != x ; then
    AC_SUBST([MPICC_BASE], [$ud_cv_mpi_compiler_basename_MPICC])
    AC_SUBST([MPICC_BASE_VERSION], [$ud_vendor_version_MPICC])
 
-   # MPICXX=CC
+   # Check MPI C++ compiler
    # UD_MPI_COMPILER_BASENAME(MPICXX)
    # UD_MSG_DEBUG(MPICXX=${MPICXX} basename=$ud_cv_mpi_compiler_basename_MPICXX)
    # MPIF90=ftn
@@ -286,11 +282,6 @@ AC_SUBST(C_VISIBILITY_FLAGS)
 
 # enable large file support
 AC_SYS_LARGEFILE
-
-# UD_PROG_CC_MAKEDEPEND
-
-# AC_HEADER_STDC
-# AC_CHECK_HEADERS([malloc.h])
 
 if test "x$MPICC" != x ; then
    # check if MPICC works for basic MPI call: MPI_Comm_rank()
@@ -576,7 +567,6 @@ if test "x$has_lustre" = xno ; then
       AC_MSG_RESULT(no)
    fi
 fi
-# AC_SUBST(MIMIC_LUSTRE, [$minicking_lustre])
 AM_CONDITIONAL(MIMIC_LUSTRE, [test x$minicking_lustre = x1])
 
 if test "x${debug}" = xyes; then
@@ -685,9 +675,6 @@ if test "x$enable_profiling" = "xyes" ; then
    fi
 fi
 AC_SUBST([GIO_PROFILING], [$profiling_mode])
-
-dnl build test programs and benchmark programs
-AM_CONDITIONAL(BUILD_TESTSETS, [true])
 
 AC_ARG_VAR(TESTSEQRUN, [Run command (on one MPI process) for "make check" on cross-compile environment. Example: "aprun -n 1". @<:@default: none@:>@])
 
@@ -816,6 +803,16 @@ AC_CONFIG_FILES(Makefile \
 AC_SUBST(enable_static)
 AC_SUBST(enable_shared)
 AM_CONDITIONAL(BUILD_SHARED_LIB, [test x${enable_shared} = xyes])
+
+# check LMOD environment variables (often on Cray systems) if available
+AM_CONDITIONAL(HAVE_LMOD_ENV, [test x${LMOD_FAMILY_PRGENV} != x])
+AC_SUBST(LMOD_VERSION)
+AC_SUBST(LMOD_FAMILY_PRGENV)
+AC_SUBST(LMOD_FAMILY_PRGENV_VERSION)
+AC_SUBST(LMOD_FAMILY_COMPILER)
+AC_SUBST(LMOD_FAMILY_COMPILER_VERSION)
+AC_SUBST(LMOD_FAMILY_MPI)
+AC_SUBST(LMOD_FAMILY_MPI_VERSION)
 
 AC_OUTPUT
 if test "x$GIO_SUB_BUILD" != xyes ; then
