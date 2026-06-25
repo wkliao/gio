@@ -10,7 +10,7 @@ AM_CPPFLAGS  = -I${srcdir}/src
 
 AM_CFLAGS = @C_VISIBILITY_FLAGS@
 
-if BUILD_AS_SUBPROJECT
+if GIO_BUILT_AS_SUBPROJECT
    noinst_LTLIBRARIES = libgio.la
 else
    lib_LTLIBRARIES = libgio.la

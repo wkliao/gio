@@ -76,7 +76,7 @@ typedef int* MPI_Info;
 /* If GIO is being built as a subproject/submodule of another software, such as
  * PnetCDF, then make all GIO APIs private.
  */
-#if 1 == @BUILD_AS_SUBPROJECT@
+#if 1 == @GIO_BUILT_AS_SUBPROJECT@
   #ifdef GIO_PUBLIC_API
   #undef GIO_PUBLIC_API
   #define GIO_PUBLIC_API

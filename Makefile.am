@@ -6,7 +6,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-if BUILD_AS_SUBPROJECT
+if GIO_BUILT_AS_SUBPROJECT
    SUBDIRS = src
 else
    SUBDIRS = src utils test examples
@@ -23,28 +23,28 @@ EXTRA_DIST = COPYING \
 PTEST_SUBDIRS = test
 
 ptest:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	@for d in $(PTEST_SUBDIRS) ; do \
 		$(MAKE) $(MFLAGS) -C $$d ptest $$* || exit 1 ; \
 	done
 endif
 
 ptests:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	@for d in $(PTEST_SUBDIRS) ; do \
 		$(MAKE) $(MFLAGS) -C $$d ptests $$* || exit 1 ; \
 	done
 endif
 
 tests-local:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	@echo '|'
 	@echo '|  All test programs have been successfully built.'
 	@echo '|'
 endif
 
 check-local:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	@echo '|'
 	@echo '|  All sequential test programs have run successfully.'
 	@echo '|'
@@ -63,7 +63,7 @@ endif
 # "$DESTDIR/$prefix", so one can cd to $DESTDIR and pack the folder $prefix
 # there into a tar ball.
 install-data-hook:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	@echo '+----------------------------------------------------------------------------+'
 	@echo '|'
 	@echo '|  GIO has been successfully installed under'
@@ -115,7 +115,7 @@ distclean-local:
 .PHONY: ptest ptests tests
 
 dist-hook:
-if ! BUILD_AS_SUBPROJECT
+if ! GIO_BUILT_AS_SUBPROJECT
 	$(SED_I) -e "1,10s|_GIO_RELEASE_DATE_|@GIO_RELEASE_DATE@|" $(distdir)/RELEASE_NOTES.md
 	$(SED_I) -e "1,10s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/RELEASE_NOTES.md
 	$(SED_I) -e "s|_GIO_VERSION_|$(GIO_VERSION)|" $(distdir)/INSTALL.md
