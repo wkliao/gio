@@ -55,21 +55,21 @@ typedef int* MPI_Info;
 #endif
 
 /*---- Public APIs ----------------------------------------------------------*/
-#ifdef PUBLIC_API
-#undef PUBLIC_API
+#ifdef GIO_PUBLIC_API
+#undef GIO_PUBLIC_API
 #endif
 
 #if defined _WIN32 || defined __CYGWIN__
   #ifdef BUILDING_DLL
-    #define PUBLIC_API __declspec(dllexport)
+    #define GIO_PUBLIC_API __declspec(dllexport)
   #else
-    #define PUBLIC_API __declspec(dllimport)
+    #define GIO_PUBLIC_API __declspec(dllimport)
   #endif
 #else
   #if __GNUC__ >= 4
-    #define PUBLIC_API __attribute__ ((visibility ("default")))
+    #define GIO_PUBLIC_API __attribute__ ((visibility ("default")))
   #else
-    #define PUBLIC_API
+    #define GIO_PUBLIC_API
   #endif
 #endif
 
@@ -77,65 +77,65 @@ typedef int* MPI_Info;
  * PnetCDF, then make all GIO APIs private.
  */
 #if 1 == @BUILD_AS_SUBPROJECT@
-  #ifdef PUBLIC_API
-  #undef PUBLIC_API
-  #define PUBLIC_API
+  #ifdef GIO_PUBLIC_API
+  #undef GIO_PUBLIC_API
+  #define GIO_PUBLIC_API
   #endif
 #endif
 
-PUBLIC_API const char*
+GIO_PUBLIC_API const char*
 GIO_inq_libvers(void);
 
-PUBLIC_API const char*
+GIO_PUBLIC_API const char*
 GIO_strerror(int err);
 
-PUBLIC_API const char*
+GIO_PUBLIC_API const char*
 GIO_strerrno(int err);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info,
                 GIO_File *fh);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_close(GIO_File *fh);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_sync(GIO_File fh);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_delete(const char *filename);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_set_size(GIO_File fh, MPI_Offset size);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_get_size(GIO_File fh, MPI_Offset *size);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_get_info(GIO_File fh, MPI_Info *info_used);
 
-PUBLIC_API MPI_Offset
+GIO_PUBLIC_API MPI_Offset
 GIO_write(GIO_File fh, const void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-PUBLIC_API MPI_Offset
+GIO_PUBLIC_API MPI_Offset
 GIO_write_all(GIO_File fh, const void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-PUBLIC_API MPI_Offset
+GIO_PUBLIC_API MPI_Offset
 GIO_read(GIO_File fh, void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
                 MPI_Offset buf_npairs,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
-PUBLIC_API MPI_Offset
+GIO_PUBLIC_API MPI_Offset
 GIO_read_all(GIO_File fh, void *buf,
                 MPI_Offset file_npairs,
                 const MPI_Offset *file_offs, const MPI_Offset *file_lens,
@@ -143,18 +143,18 @@ GIO_read_all(GIO_File fh, void *buf,
                 const MPI_Offset *buf_offs,  const MPI_Offset *buf_lens);
 
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_flatten_subarray(int ndims, int esize, MPI_Offset disp, const int *sizes,
                 const int *subsizes, const int *starts, MPI_Offset *npairs,
                 MPI_Offset **offs, MPI_Offset **lens);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_inq_malloc_size(MPI_Offset *size);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_inq_malloc_max_size(MPI_Offset *size);
 
-PUBLIC_API int
+GIO_PUBLIC_API int
 GIO_inq_malloc_list(void);
 
 #endif
