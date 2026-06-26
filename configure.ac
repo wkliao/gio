@@ -9,7 +9,7 @@ dnl
 
 AC_REVISION([m4_esyscmd_s([if test -d .git ; then git describe --always ; fi])])
 
-AC_PREREQ([2.70])
+AC_PREREQ([2.71])
 AC_INIT([GIO], [1.0.0], [], [gio], [https://github.com/wkliao/gio])
 
 dnl config.h.in will be created by autoreconf (autoheader)

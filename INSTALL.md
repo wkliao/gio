@@ -14,7 +14,12 @@ default configuration of GIO up and running.
 
 * You will need the following prerequisites.
   - REQUIRED: This compressed tar file, e.g. gio-1.0.0.tar.gz
-  - REQUIRED: An MPI C compiler
+  - REQUIRED: An MPI C compiler, e.g. [MPICH](https://www.mpich.org) and
+    [OpenMPI](https://www.open-mpi.org)
+  - [autoconfig](https://www.gnu.org/software/autoconf) version 2.71
+  - [automake](https://www.gnu.org/software/automake) version 1.16.5
+  - [libtool](https://www.gnu.org/software/libtool) version 2.5.4
+  - [m4](https://www.gnu.org/software/m4) version 1.4.17
   - Also, you need to know what shell you are using since different shell has
     different command syntax. Command "echo $SHELL" prints out the current
     shell used by your terminal program.
@@ -67,18 +72,18 @@ default configuration of GIO up and running.
     ```
     setenv PATH $HOME/GIO/1.0.0/bin:$PATH
     ```
-    for bash and sh:
+  * for bash and sh:
     ```
     export PATH=$HOME/GIO/1.0.0/bin:$PATH
     ```
-    Check that everything is in order at this point by doing:
+  * Check that everything is in order at this point by doing:
     ```
     which gio_version
     ```
     This above commands should display the path to your bin subdirectory of
     your install directory. An example output on screen is:
     ```
-        $HOME/GIO/1.0.0/bin/gio_version
+    $HOME/GIO/1.0.0/bin/gio_version
     ```
     If you have completed all of the above steps, you have successfully
     installed GIO.
@@ -134,8 +139,9 @@ Some influential environment variables:
               [default: ./]
 ```
 
-Use these variables to override the choices made by `configure' or to help
-it to find libraries and programs with nonstandard names/locations.
+Use the environment variables listed above to override the choices made by
+`configure' or to help it to find libraries and programs with nonstandard
+names/locations.
 
 GIO can automatically detect the available MPI compilers and compile flags.
 If alternate compilers or flags are desired, they can be specified by the
