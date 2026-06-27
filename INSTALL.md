@@ -30,13 +30,17 @@ default configuration of GIO up and running.
   cd gio-1.0.0
   ```
 
-* Choose an installation directory, for example $HOME/GIO/1.0.0
+* Generate GNU build system files.
+  ```
+  autoreconf -i
+  ```
 
-* Configure GIO specifying the installation directory:
+* Choose an installation directory, for example $HOME/GIO/1.0.0, and configure
+  GIO by specifying the installation directory:
   ```
   ./configure --prefix=$HOME/GIO/1.0.0
   ```
-  * To use an MPI C compiler installed in a non-default location, add and
+  + To use an MPI C compiler installed in a non-default location, add and
     set the environment variable MPICC in the same command line, e.g.
     ```
     ./configure --prefix=$HOME/GIO/1.0.0 MPICC=/path/to/mpicc
@@ -59,7 +63,8 @@ default configuration of GIO up and running.
   ```
   make install
   ```
-  If a non-default install directory is desired, use command:
+  If an install directory different from the one set as `prefix` at the
+  configure time is desired, use command:
   ```
   make install prefix=/OTHER/INSTALL/DIRECTORY
   ```
@@ -108,8 +113,6 @@ Here lists a few important options:
   --enable-debug          Enable GIO internal debug mode. This also enables
                           safe mode. [default: disabled]
   --enable-thread-safe    Enable thread-safe capability. [default: disabled]
-  --enable-doxygen        Enable generation of documentation. [default:
-                          disabled]
   --enable-profiling      Enable time and memory profiling. [default: disabled]
   --disable-versioning    Disable library versioning. [default: enabled]
 
@@ -222,10 +225,4 @@ Note on setting TESTOUTDIR. In order to run parallel test correctly, the output
 directory must be on a file system accessible to all MPI processes.  We
 recommend to use parallel file systems or POSIX compliant file systems (Using
 NFS will most likely fail the parallel test.)
-
----
-
-### Reporting Installation or Usage Problems
-
-Please create a github issue at https://github.com/wkliao/gio.
 
