@@ -18,6 +18,7 @@ EXTRA_DIST = COPYING \
              INSTALL.md \
              README.md \
              RELEASE_NOTES.md \
+             CREDITS \
              docs
 
 PTEST_SUBDIRS = test
