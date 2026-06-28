@@ -11,6 +11,13 @@ features and a slightly different API syntax.
 * Unlike MPI-IO, GIO does not support features such as, fileview, non-blocking
   APIs, asynchronous APIs, split APIs, or shared-file pointers.
 
+## GIO software releases
+* The latest version
+  [1.0.0](https://github.com/wkliao/gio/wiki/releases/gio-1.0.0.tar.gz)
+  was released on June 27, 2026.
+* All previous release tarball files are available from the
+  [download page](https://github.com/wkliao/gio/wiki/GIO-software-release-tarball-files)
+
 ## Software Dependency
 
 GIO is built on top of MPI and thus requires an MPI C compiler. Shared-file
