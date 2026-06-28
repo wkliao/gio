@@ -16,10 +16,14 @@ default configuration of GIO up and running.
   - REQUIRED: This compressed tar file, e.g. gio-1.0.0.tar.gz
   - REQUIRED: An MPI C compiler, e.g. [MPICH](https://www.mpich.org) and
     [OpenMPI](https://www.open-mpi.org)
-  - [autoconfig](https://www.gnu.org/software/autoconf) version 2.71
-  - [automake](https://www.gnu.org/software/automake) version 1.16.5
-  - [libtool](https://www.gnu.org/software/libtool) version 2.5.4
-  - [m4](https://www.gnu.org/software/m4) version 1.4.17
+  - [autoconfig](https://www.gnu.org/software/autoconf) version 2.71, if
+    building from a git clone.
+  - [automake](https://www.gnu.org/software/automake) version 1.16.5, if
+    building from a git clone.
+  - [libtool](https://www.gnu.org/software/libtool) version 2.5.4, if building
+    from a git clone.
+  - [m4](https://www.gnu.org/software/m4) version 1.4.17, if building from a
+    git clone.
   - Also, you need to know what shell you are using since different shell has
     different command syntax. Command "echo $SHELL" prints out the current
     shell used by your terminal program.
@@ -30,7 +34,7 @@ default configuration of GIO up and running.
   cd gio-1.0.0
   ```
 
-* Generate GNU build system files.
+* Generate GNU build system files, if building from a git clone.
   ```
   autoreconf -i
   ```
