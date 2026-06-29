@@ -15,10 +15,11 @@ endif
 DIST_SUBDIRS = src utils test examples
 
 EXTRA_DIST = COPYING \
+             CREDITS \
              INSTALL.md \
              README.md \
              RELEASE_NOTES.md \
-             CREDITS \
+             SECURITY.md \
              docs
 
 PTEST_SUBDIRS = test
