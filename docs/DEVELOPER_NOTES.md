@@ -29,7 +29,9 @@
    * FYI. When needed, one can `force` update a tag (local and remote):
      ```
      git tag -fa v1.0.0 -m "version 1.0.0"
-     git push -f --tags
+     git push -f origin v1.0.0
+
+     # git push -f --tags # force push all tags
      ```
 
 5. Generate release tar ball
