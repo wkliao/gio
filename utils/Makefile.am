@@ -46,6 +46,10 @@ if ! GIO_BUILT_AS_SUBPROJECT
 	$(SED_I) -e "s|GIO_RELEASE_VERSION|$(GIO_VERSION)|g"            $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE_FULL|@GIO_RELEASE_DATE_FULL@|g" $(distdir)/gio_version.1
 	$(SED_I) -e "s|GIO_RELEASE_DATE|@GIO_RELEASE_DATE@|g"           $(distdir)/gio_version.1
+if IS_GIT_CLONE
+	last_commit_date=`git -C $(abs_top_srcdir) log -1 --format='%cd' --date=short $(abs_srcdir)/gio_version.1` ; \
+	$(SED_I) -e "s|GIT_SRC_LAST_COMMIT|$$last_commit_date|g"        $(distdir)/gio_version.1
+endif
 endif
 
 # GNU autoconf allows DESTDIR variable when running 'make install' which will
