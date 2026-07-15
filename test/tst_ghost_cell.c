@@ -115,7 +115,7 @@ int tst_ghost_cell(const char *out_path,
 
     /* allocate and initialize I/O buffer */
     k = 0;
-    buf = (int*) malloc(esize * b_sizes[0] * b_sizes[1]);
+    buf = (int*) malloc((size_t)esize * b_sizes[0] * b_sizes[1]);
     for (i=0; i<b_sizes[0]; i++) {
         for (j=0; j<b_sizes[1]; j++) {
             int ij = i*b_sizes[1] + j;
@@ -163,8 +163,8 @@ int tst_ghost_cell(const char *out_path,
             fprintf(stderr,"Error at file open %s (%s)", filename, strerror(errno));
             goto err_out;
         }
-        file_buf = (int*) malloc(esize * f_sizes[0] * f_sizes[1]);
-        off_t rlen = pread(fd, file_buf, f_sizes[0] * f_sizes[1] * esize, 0);
+        file_buf = (int*) malloc((size_t)esize * f_sizes[0] * f_sizes[1]);
+        off_t rlen = pread(fd, file_buf, (size_t)f_sizes[0] * f_sizes[1] * esize, 0);
         assert(rlen >= 0);
         close(fd);
         for (i=0; i<f_sizes[0]; i++) {
@@ -190,7 +190,7 @@ int tst_ghost_cell(const char *out_path,
             goto err_out;
         }
         off_t fsize = lseek(fd, 0, SEEK_END);
-        off_t expected = esize * f_sizes[0] * f_sizes[1];
+        off_t expected = (off_t)esize * f_sizes[0] * f_sizes[1];
         if (fsize != expected) {
             fprintf(stderr,"Error: expecting file size %lld, but got %lld\n",
                     (long long)expected, (long long)fsize);
@@ -261,8 +261,8 @@ int tst_ghost_cell(const char *out_path,
             fprintf(stderr,"Error at file open %s (%s)", filename, strerror(errno));
             goto err_out;
         }
-        file_buf = (int*) malloc(esize * f_sizes[0] * f_sizes[1]);
-        off_t rlen = pread(fd, file_buf, f_sizes[0] * f_sizes[1] * esize, 0);
+        file_buf = (int*) malloc((size_t)esize * f_sizes[0] * f_sizes[1]);
+        off_t rlen = pread(fd, file_buf, (size_t)f_sizes[0] * f_sizes[1] * esize, 0);
         assert(rlen >= 0);
         close(fd);
         for (i=0; i<f_sizes[0]; i++) {

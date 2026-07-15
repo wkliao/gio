@@ -68,7 +68,7 @@ int main(int argc, char **argv)
         off_t offset;
         int fd, val=0;
         fd = open(filename, O_CREAT|O_WRONLY, 0600);
-        offset = sizes[0] * sizes[1] * sizeof(int) - sizeof(int);
+        offset = (off_t)sizes[0] * sizes[1] * sizeof(int) - sizeof(int);
         ssize_t wlen = pwrite(fd, &val, sizeof(int), offset);
         assert(wlen >= 0);
         fsync(fd);
