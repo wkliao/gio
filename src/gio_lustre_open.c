@@ -316,6 +316,7 @@ uint64_t get_striping(int         fd,
                       uint64_t   *start_iodevice)
 {
     int err;
+    bool is_pfl = false;
     struct llapi_layout *layout;
     uint64_t *osts=NULL, numOSTs=0;
 #ifdef GIOI_LUSTRE_DEBUG
@@ -333,6 +334,48 @@ uint64_t get_striping(int         fd,
         fprintf(stderr,"Error at %s (%d) llapi_layout_get_by_fd() failed\n",
                 __FILE__, __LINE__);
 #endif
+        goto err_out;
+    }
+
+    /* Check if the layout is composite (i.e., progressive file layout, PFL) */
+    is_pfl = llapi_layout_is_composite(layout);
+#ifdef GIOI_LUSTRE_DEBUG
+    printf("Info at %s (%d) llapi_layout_is_composite() PFS %d\n",
+           __FILE__, __LINE__, is_pfl);
+#endif
+    if (is_pfl) {
+        /* This file is using PFL. Below picks the striping count and size from
+         * the 2nd components. Note this is not perfect, but there is no other
+         * good solution to ensure best performance so far.
+         */
+        err = llapi_layout_comp_use_id(layout, 2);
+        if (err != 0) {
+#ifdef GIOI_LUSTRE_DEBUG
+            fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use_id() failed\n",
+                    __FILE__, __LINE__);
+#endif
+            goto err_out;
+        }
+
+        /* obtain file striping count */
+        err = llapi_layout_stripe_count_get(layout, stripe_count);
+        if (err != 0) {
+#ifdef GIOI_LUSTRE_DEBUG
+            fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_count_get() failed\n",
+                    __FILE__, __LINE__);
+#endif
+            goto err_out;
+        }
+
+        /* obtain file striping unit size */
+        err = llapi_layout_stripe_size_get(layout, stripe_size);
+        if (err != 0) {
+#ifdef GIOI_LUSTRE_DEBUG
+            fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_size_get() failed\n",
+                    __FILE__, __LINE__);
+#endif
+            goto err_out;
+        }
         goto err_out;
     }
 
@@ -418,6 +461,10 @@ err_out:
     if (osts != NULL) GIOI_Free(osts);
     if (layout != NULL) llapi_layout_free(layout);
 
+    /* When numOSTs == 0, the file is using Lustre's progressive file layout
+     * (PFL). Callers of this subroutine must take care of setting the number
+     * of OSTs.
+     */
     return numOSTs;
 }
 
@@ -907,6 +954,7 @@ GIOI_Lustre_create(GIO_File fh)
 {
     int err=GIO_NOERR, rank, perm, old_mask;
     int stripin_info[5] = {GIO_NOERR, -1, -1, -1, -1};
+    bool is_pfl = false;
     uint64_t numOSTs, stripe_count, stripe_size, start_iodevice;
 #ifdef HAVE_LUSTRE
     int total_num_OSTs;
@@ -1012,6 +1060,16 @@ GIOI_Lustre_create(GIO_File fh)
         close(dd);
         GIOI_Free(dirc);
 
+        /* When numOSTs == 0, the file is using Lustre's progressive file
+         * layout (PFL). In this case, we ignore the overstriping setting.
+         */
+        if (numOSTs == 0) {
+            is_pfl = true;
+            fh->hints->overstriping_ratio = 1;
+            overstriping_ratio = 1;
+            numOSTs = stripe_count;
+        }
+
 #ifdef GIOI_LUSTRE_DEBUG_VERBOSE
         printf("line %d: use parent folder's striping to set file's:\n",__LINE__);
         PRINT_LAYOUT(numOSTs);
@@ -1076,16 +1134,22 @@ GIOI_Lustre_create(GIO_File fh)
     PRINT_LAYOUT(pattern);
 #endif
 
-    /* create a new file and set striping */
-    fh->fd_sys = set_striping(fh->filename, pattern,
-                                            numOSTs,
-                                            stripe_count,
-                                            stripe_size,
-                                            start_iodevice);
+    if (is_pfl)
+        /* is_pfl is true only when I/O hint file_striping is set to "inherit"
+         * and the parent folder is using PFL.
+         */
+        fh->fd_sys = -1;
+    else
+        /* create a new file and set striping */
+        fh->fd_sys = set_striping(fh->filename, pattern,
+                                                numOSTs,
+                                                stripe_count,
+                                                stripe_size,
+                                                start_iodevice);
 
     if (fh->fd_sys < 0)
-        /* If explicitly setting file striping failed, inherit the striping
-         * from the folder by simply creating the file.
+        /* If PFL is used or explicitly setting file striping failed, inherit
+         * the striping from the folder by simply creating the file.
          */
         fh->fd_sys = open(fh->filename, fh->amode, perm);
 
@@ -1102,6 +1166,16 @@ GIOI_Lustre_create(GIO_File fh)
                                        &stripe_count,
                                        &stripe_size,
                                        &start_iodevice);
+
+    /* When numOSTs == 0, the file is using Lustre's progressive file
+     * layout (PFL). In this case, we ignore the overstriping setting.
+     */
+    if (numOSTs == 0) {
+        fh->hints->overstriping_ratio = 1;
+        overstriping_ratio = 1;
+        numOSTs = stripe_count;
+    }
+
 #elif defined(MIMIC_LUSTRE)
     char *env_str  = getenv("MIMIC_STRIPE_SIZE");
     stripe_size    = (env_str != NULL) ? atoi(env_str) : STRIPE_SIZE;
@@ -1139,7 +1213,14 @@ err_out:
     fh->hints->striping_factor = stripin_info[2];
     fh->hints->start_iodevice  = stripin_info[3];
     fh->hints->lustre_num_osts = stripin_info[4];
-    fh->hints->overstriping_ratio = stripin_info[2] / stripin_info[4];
+
+    if (fh->hints->lustre_num_osts == 0) {
+        fh->hints->lustre_num_osts = 1;
+        fh->hints->overstriping_ratio = 1;
+    }
+    else
+        fh->hints->overstriping_ratio = fh->hints->striping_factor
+                                      / fh->hints->lustre_num_osts;
 
     SET_INFO(fh);
 
@@ -1221,6 +1302,13 @@ GIOI_Lustre_open(GIO_File fh)
 
     numOSTs = get_striping(fh->fd_sys, fh->filename, &pattern, &stripe_count,
                            &stripe_size, &start_iodevice);
+
+    /* When numOSTs == 0, the file is using Lustre's progressive file
+     * layout (PFL). In this case, we set numOSTs to be stripe_count.
+     */
+    if (numOSTs == 0)
+        numOSTs = stripe_count;
+
 #elif defined(MIMIC_LUSTRE)
     char *env_str  = getenv("MIMIC_STRIPE_SIZE");
     stripe_size    = (env_str != NULL) ? atoi(env_str) : STRIPE_SIZE;
@@ -1244,11 +1332,18 @@ err_out:
         return err;
     }
 
-    fh->hints->striping_unit      = stripin_info[1];
-    fh->hints->striping_factor    = stripin_info[2];
-    fh->hints->start_iodevice     = stripin_info[3];
-    fh->hints->lustre_num_osts    = stripin_info[4];
-    fh->hints->overstriping_ratio = stripin_info[2] / stripin_info[4];
+    fh->hints->striping_unit   = stripin_info[1];
+    fh->hints->striping_factor = stripin_info[2];
+    fh->hints->start_iodevice  = stripin_info[3];
+    fh->hints->lustre_num_osts = stripin_info[4];
+
+    if (fh->hints->lustre_num_osts == 0) {
+        fh->hints->lustre_num_osts = 1;
+        fh->hints->overstriping_ratio = 1;
+    }
+    else
+        fh->hints->overstriping_ratio = fh->hints->striping_factor
+                                      / fh->hints->lustre_num_osts;
 
     SET_INFO(fh);
 
