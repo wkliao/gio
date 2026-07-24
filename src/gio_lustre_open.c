@@ -306,6 +306,7 @@ int sort_ost_ids(struct llapi_layout *layout,
     return (numOSTs + 1);
 }
 
+#ifdef GIOI_LUSTRE_DEBUG
 /*----< inq_num_components() >-----------------------------------------------*/
 /* Inquire the number of components in a layout */
 static
@@ -340,6 +341,7 @@ int inq_num_components(struct llapi_layout *layout)
 err_out:
     return num;
 }
+#endif
 
 /*----< get_striping() >-----------------------------------------------------*/
 static
@@ -386,14 +388,23 @@ uint64_t get_striping(int         fd,
         printf("Info at %s (%d) the file's PFL has %d components\n",
                     __FILE__, __LINE__, num_components);
 #endif
-        /* Below picks the striping count and size from
-         * the 2nd components. Note this is not perfect, but there is no other
-         * good solution to ensure best performance so far.
+        /* Below picks the striping count and size from the 2nd to the last
+         * component. Note this is not perfect, but there is no other good
+         * solution to ensure best performance so far.
          */
-        err = llapi_layout_comp_use_id(layout, 2);
+        err = llapi_layout_comp_use(layout, LLAPI_LAYOUT_COMP_USE_LAST);
         if (err != 0) {
 #ifdef GIOI_LUSTRE_DEBUG
-            fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use_id() failed\n",
+            fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use() failed\n",
+                    __FILE__, __LINE__);
+#endif
+            goto err_out;
+        }
+
+        err = llapi_layout_comp_use(layout, LLAPI_LAYOUT_COMP_USE_PREV);
+        if (err != 0) {
+#ifdef GIOI_LUSTRE_DEBUG
+            fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use() failed\n",
                     __FILE__, __LINE__);
 #endif
             goto err_out;
