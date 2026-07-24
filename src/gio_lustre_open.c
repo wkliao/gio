@@ -306,6 +306,41 @@ int sort_ost_ids(struct llapi_layout *layout,
     return (numOSTs + 1);
 }
 
+/*----< inq_num_components() >-----------------------------------------------*/
+/* Inquire the number of components in a layout */
+static
+int inq_num_components(struct llapi_layout *layout)
+{
+    int err, num=0;
+
+    /* Move cursor to the first component */
+    err = llapi_layout_comp_use(layout, LLAPI_LAYOUT_COMP_USE_FIRST);
+    if (err < 0) {
+        fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use() failed (%s)\n",
+               __FILE__, __LINE__, strerror(errno));
+        goto err_out;
+    }
+
+    while (err == 0) { /* Traverse all components */
+
+        /* Advance cursor */
+        err = llapi_layout_comp_use(layout, LLAPI_LAYOUT_COMP_USE_NEXT);
+        if (err < 0) {
+            fprintf(stderr,"Error at %s (%d) llapi_layout_comp_use() failed (%s)\n",
+                __FILE__, __LINE__, strerror(errno));
+            goto err_out;
+        }
+        /* llapi_layout_comp_use() return 0 on success, and 1 when there is no
+         * next or previous component.
+         */
+
+        num++;
+    }
+
+err_out:
+    return num;
+}
+
 /*----< get_striping() >-----------------------------------------------------*/
 static
 uint64_t get_striping(int         fd,
@@ -344,7 +379,14 @@ uint64_t get_striping(int         fd,
            __FILE__, __LINE__, is_pfl);
 #endif
     if (is_pfl) {
-        /* This file is using PFL. Below picks the striping count and size from
+        /* This file is using PFL. */
+#ifdef GIOI_LUSTRE_DEBUG
+        int num_components = inq_num_components(layout);
+
+        printf("Info at %s (%d) the file's PFL has %d components\n",
+                    __FILE__, __LINE__, num_components);
+#endif
+        /* Below picks the striping count and size from
          * the 2nd components. Note this is not perfect, but there is no other
          * good solution to ensure best performance so far.
          */
@@ -1134,24 +1176,29 @@ GIOI_Lustre_create(GIO_File fh)
     PRINT_LAYOUT(pattern);
 #endif
 
-    if (is_pfl)
-        /* is_pfl is true only when I/O hint file_striping is set to "inherit"
-         * and the parent folder is using PFL.
+    if (is_pfl) {
+        /* is_pfl is true only when I/O hint file_striping is set to "inherit",
+         * hint striping_factor is not set, and the parent folder is using PFL.
          */
         fh->fd_sys = -1;
-    else
-        /* create a new file and set striping */
+    }
+    else {
+        /* create a new file and set striping (will not be PFL)*/
         fh->fd_sys = set_striping(fh->filename, pattern,
                                                 numOSTs,
                                                 stripe_count,
                                                 stripe_size,
                                                 start_iodevice);
+    }
 
-    if (fh->fd_sys < 0)
-        /* If PFL is used or explicitly setting file striping failed, inherit
-         * the striping from the folder by simply creating the file.
+    if (fh->fd_sys < 0) {
+        /* If inherit the striping from the parent folder or set_striping()
+         * failed, we simply call open() to create the file. By default, Lustre
+         * will use the same striping as the parent folder if striping is not
+         * explicitly set by the users.
          */
         fh->fd_sys = open(fh->filename, fh->amode, perm);
+    }
 
     if (fh->fd_sys < 0) {
         fprintf(stderr,"Error at %s (%d) failed to create file %s (%s)\n",
